@@ -1,7 +1,10 @@
 #include <string>
-#include "BinaryNode.hpp"
 #include <iostream>
+
+#include "BinaryNode.hpp"
+#include "OperatorNode.hpp"
 using namespace std;
+
 /*
 * TODO 1 Metodo recursivo que vai até encontrar NodeType == TABLE e vai voltar calculando custo e quantidade de tuplas
 * TODO 2 Classe e logica pro "Banco de Dados"
