@@ -140,12 +140,77 @@ int Table::primary_index_access_cost() const
 	return 0; //TODO
 }
 
+SelectionNode::SelectionNode(const OperatorNode* left, Expression expr)
+{
+		this->_left = left;
+		this->_expression = expr;
+}
+
+SelectionNode::~SelectionNode(){}
+
+int SelectionNode::best_access_cost(int block_size_BD, int nBuf_BD)
+{
+	int bR;
+
+
+	int res = A1(block_size_BD);
+	string best = "A1";
+
+	bR = res;
+
+	int a2 = A2(bR);
+	if(a2 != 0 && a2 < res) {
+		res = a2;
+		best = "A2";
+	}
+}
+
+/*
+ * A1 = bR = Pesquisa linear
+ * fR = piso[tbloco/tR] fator de bloco table
+ * bR = teto[nR/fR] = Numero de blocos table
+ * tbloco = tamanho do bloco BD
+ * tR = tamanho da tupla table
+ * nR = numero tuplas table
+ *
+ * @return bR
+*/
+int SelectionNode::A1(int block_size_BD)
+{
+	int fR = block_size_BD / _left->size();
+	double d_bR = _left->tuple_quantity() / fR;
+
+	//aplicando teto
+	int i_bR = (int) d_bR;
+	if (m_bR > i_bR)
+		i_bR = i_bR + 1;
+
+	return i_bR;
+}
+
+/*
+ * A2 = teto[log2 bR] + teto[Cr(ai)/fR] -1 ou teto[log2 bR] se ai eh chave
+ * Cr(ai) = nR/VR(ai)
+ * fR = piso[tbloco/tR] fator de bloco table
+ *
+ *
+ *
+*/
+int SelectionNode::A2(int bR)
+{
+	// qual a diferenca entre E e OU entre as expressoes, sempre considera a com menor custo pro resultado final?
+	// data <= 'valor' ^ data >= 'valor'
+	// (Expr ^ Expr) Expr
+	//for(exp:Expression)
+	//
+
+	return 0;
+}
+
 /*
 class SelectionNode : public OperatorNode {
 
 	public:
-		SelectionNode(const OperatorNode* left, Expression expression);
-		virtual ~SelectionNode();
 
 		int best_access_cost();
 
