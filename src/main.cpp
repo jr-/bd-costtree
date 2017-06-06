@@ -1,7 +1,6 @@
 #include <string>
 #include <iostream>
 
-#include "BinaryNode.hpp"
 #include "OperatorNode.hpp"
 using namespace std;
 
