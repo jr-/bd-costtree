@@ -5,6 +5,9 @@
 #include "OperatorNode.hpp"
 using namespace std;
 
+int _block_size = 4096;
+int _nBuf = 3;
+
 /*
 * TODO 1 Metodo recursivo que vai até encontrar NodeType == TABLE e vai voltar calculando custo e quantidade de tuplas
 * TODO 2 Classe e logica pro "Banco de Dados"

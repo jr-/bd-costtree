@@ -4,6 +4,8 @@
 #include <string>
 #include <deque>
 #include <unordered_map>
+#include <tuple>
+#include <math.h>
 
 using std::string;
 using std::deque;
@@ -21,28 +23,16 @@ class NotEqualExpression : public Expression {};
 class GreaterExpression : public Expression {};
 class LessExpression : public Expression {};
 
-class Table;
+//global variable D:
+extern int _block_size;
+extern int _nBuf;
 
-class OperatorNode {
-
-	public:
-		OperatorNode();
-		virtual ~OperatorNode();
-
-		int best_access_number();
-		Table result();
-
-	protected:
-		const OperatorNode* _left, *_right;
-};
-
-class Table : public OperatorNode {
+class Table {
 	public:
 		Table(string name, int tuple_quantity);
 		virtual ~Table();
 
-		Table result() const;
-		int best_access_number() const;
+		int best_access_cost() const;
 
 		//must be unique
 		void add_attribute(string attribute_name, type attribute_type, int size, int variability);
@@ -52,6 +42,13 @@ class Table : public OperatorNode {
 		void add_secondary_index(string attribute_name, int n, int fi);
 		void add_primary_index(int n, int fi);
 		void ordered_by(string attribute);
+
+		int tuple_quantity()const {return _tuple_quantity;};
+		int block_quantity()const {return ceil(_tuple_quantity / block_factor());};
+		int block_factor() const {return floor(_block_size / size());};
+		int size() const;
+		bool has_primary_index() const {return _primary_index == std::make_pair<int, int>(0,0);};
+		int primary_index_access_cost() const;
 
 	private:
 		string _name;
@@ -72,14 +69,25 @@ class Table : public OperatorNode {
 
 };
 
+class OperatorNode : public Table {
+
+	public:
+		OperatorNode();
+		virtual ~OperatorNode();
+
+		int best_access_cost();
+
+	protected:
+		const OperatorNode* _left, *_right;
+};
+
 class SelectionNode : public OperatorNode {
 
 	public:
 		SelectionNode(const OperatorNode* left, Expression expression);
 		virtual ~SelectionNode();
 
-		int best_access_number();
-		Table result();
+		int best_access_cost();
 
 	private:
 		//tree containing the expression
@@ -93,8 +101,7 @@ class ProjectionNode : public OperatorNode {
 		ProjectionNode(const OperatorNode* left, deque<string, string> attributes);
 		virtual ~ProjectionNode();
 
-		int best_access_number();
-		Table result();
+		int best_access_cost();
 
 	private:
 		//attributes<attr name, table name> attributes to project
@@ -108,8 +115,7 @@ class ProductNode : public OperatorNode {
 		ProductNode(const OperatorNode* left, const OperatorNode* right);
 		virtual ~ProductNode();
 
-		int best_access_number();
-		Table result();
+		int best_access_cost();
 
 };
 
@@ -119,8 +125,7 @@ class JoinNode : public OperatorNode {
 		JoinNode(const OperatorNode* left, const OperatorNode* right, Expression expression);
 		virtual ~JoinNode();
 
-		int best_access_number();
-		Table result();
+		int best_access_cost();
 
 	private:
 		Expression _expression;
@@ -133,23 +138,13 @@ class NaturalJoinNode : public OperatorNode {
 		NaturalJoinNode(const OperatorNode* left, const OperatorNode* right);
 		virtual ~NaturalJoinNode();
 
-		int best_access_number();
-		Table result();
-
-};
-
-class Database {
-
-	public:
-		Database(int nbuf, int block_size);
-		void insert_table(Table table);
+		int best_access_cost();
 
 	private:
-		//buffer size
-		int _nBuf;
-		//disk block size in bytes
-		int _block_size;
-		deque<Table> _tables;
+		int A1();
+		int A2();
+		int A3();
+		int A4();
 };
 
 #endif  // OPERATOR_NODE_HPP
