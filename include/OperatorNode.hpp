@@ -87,11 +87,14 @@ class SelectionNode : public OperatorNode {
 		SelectionNode(const OperatorNode* left, Expression expression);
 		virtual ~SelectionNode();
 
-		int best_access_cost();
+		int best_access_cost(int block_size_BD, int nBuf_BD);
 
 	private:
 		//tree containing the expression
 		Expression _expression;
+
+		int A1(int block_size_BD);
+		int A2(int bR);
 
 };
 

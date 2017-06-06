@@ -152,7 +152,6 @@ int SelectionNode::best_access_cost(int block_size_BD, int nBuf_BD)
 {
 	int bR;
 
-
 	int res = A1(block_size_BD);
 	string best = "A1";
 
@@ -182,7 +181,7 @@ int SelectionNode::A1(int block_size_BD)
 
 	//aplicando teto
 	int i_bR = (int) d_bR;
-	if (m_bR > i_bR)
+	if (d_bR > i_bR)
 		i_bR = i_bR + 1;
 
 	return i_bR;
