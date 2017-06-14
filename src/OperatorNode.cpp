@@ -1,6 +1,7 @@
 #include "OperatorNode.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 using std::string;
 using std::deque;
@@ -26,6 +27,7 @@ Table::~Table(){}
 int Table::best_access_cost() const
 {
 	//does this make sense for Table? Maybe not
+    return 0;
 }
 
 void Table::add_attribute(string attribute_name, type attribute_type, int size, int variability)
@@ -119,10 +121,12 @@ int NaturalJoinNode::A2()
 
 int NaturalJoinNode::A3()
 {
+    return 0;
 }
 
 int NaturalJoinNode::A4()
 {
+    return 0;
 }
 
 int Table::size() const
@@ -130,7 +134,7 @@ int Table::size() const
 	int res = 0;
 	for(std::pair<string, std::tuple<type, int, int>> i : _attributes) {
 		//gets size
-		res += std::get<1>(i.second);
+        res += std::get<1>(i.second);
 	}
 	return res;
 }
@@ -148,11 +152,11 @@ SelectionNode::SelectionNode(const OperatorNode* left, Expression expr)
 
 SelectionNode::~SelectionNode(){}
 
-int SelectionNode::best_access_cost(int block_size_BD, int nBuf_BD)
+int SelectionNode::best_access_cost()
 {
 	int bR;
 
-	int res = A1(block_size_BD);
+	int res = A1();
 	string best = "A1";
 
 	bR = res;
@@ -162,6 +166,7 @@ int SelectionNode::best_access_cost(int block_size_BD, int nBuf_BD)
 		res = a2;
 		best = "A2";
 	}
+	return 0;
 }
 
 /*
@@ -174,17 +179,12 @@ int SelectionNode::best_access_cost(int block_size_BD, int nBuf_BD)
  *
  * @return bR
 */
-int SelectionNode::A1(int block_size_BD)
+int SelectionNode::A1()
 {
-	int fR = block_size_BD / _left->size();
-	double d_bR = _left->tuple_quantity() / fR;
+	int fR = _block_size / _left->size();
+	int bR = ceil(float(_left->tuple_quantity() / fR));
 
-	//aplicando teto
-	int i_bR = (int) d_bR;
-	if (d_bR > i_bR)
-		i_bR = i_bR + 1;
-
-	return i_bR;
+	return bR;
 }
 
 /*
@@ -203,7 +203,7 @@ int SelectionNode::A2(int bR)
 	//for(exp:Expression)
 	//
 
-	return 0;
+    return 0;
 }
 
 /*
