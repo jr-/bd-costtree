@@ -17,7 +17,7 @@ enum type {
 
 class Expression {
 	public:
-		int tuple_quantity() const;
+		virtual int tuple_quantity() const;
 };
 class AndExpression : public Expression {};
 class OrExpression : public Expression {};
