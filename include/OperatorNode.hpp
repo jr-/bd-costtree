@@ -15,17 +15,6 @@ enum type {
 	STRING, INT
 };
 
-class Expression {
-	public:
-		virtual int tuple_quantity() const;
-};
-class AndExpression : public Expression {};
-class OrExpression : public Expression {};
-class EqualExpression: public Expression {};
-class NotEqualExpression : public Expression {};
-class GreaterExpression : public Expression {};
-class LessExpression : public Expression {};
-
 //global variable D:
 extern int _block_size;
 extern int _nBuf;
@@ -33,7 +22,7 @@ extern int _nBuf;
 class Table {
 	public:
 		Table(string name, int tuple_quantity);
-		Table(const Table& to_copy);
+		//Table(const Table& to_copy);
 		virtual ~Table();
 
 		int best_access_cost() const;
@@ -47,13 +36,14 @@ class Table {
 		void add_primary_index(int n, int fi);
 		void ordered_by(string attribute);
 
-		string name()const {return _name;};
-		int tuple_quantity()const {return _tuple_quantity;};
-		int block_quantity()const {return ceil(_tuple_quantity / block_factor());};
+		string name() const {return _name;};
+		int tuple_quantity() const {return _tuple_quantity;};
+		int block_quantity() const {return ceil(_tuple_quantity / block_factor());};
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
 		bool has_primary_index() const {return _primary_index == std::make_pair<int, int>(0,0);};
 		int primary_index_access_cost() const;
+		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
 
 	private:
 		string _name;
@@ -72,6 +62,82 @@ class Table {
 		//are the tuples ordered in disk by an attribute? If not, empty string
 		string _ordered_by;
 
+};
+
+class Expression {
+	public:
+		Expression();
+		virtual ~Expression();
+		virtual int tuple_quantity(const Table* table) const = 0;
+		virtual double cardinality(const Table* table) const = 0;
+};
+
+class AndExpression : public Expression {
+	public:
+		AndExpression(const Expression* left, const Expression* right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		const Expression *_left, *_right;
+};
+
+class OrExpression : public Expression {
+	public:
+		OrExpression(const Expression* left, const Expression* right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		const Expression *_left, *_right;
+};
+
+class EqualExpression: public Expression {
+	public:
+		EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		//contains <Table_name, attribute_name>
+		//or just <"", value> for literals
+		const std::pair<string, string> _left_attribute, _right_attribute;
+};
+
+class NotEqualExpression : public Expression {
+	public:
+		NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		//contains <Table_name, attribute_name>
+		//or just <"", value> for literals
+		const std::pair<string, string> _left_attribute, _right_attribute;
+};
+
+class GreaterExpression : public Expression {
+	public:
+		GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		//contains <Table_name, attribute_name>
+		//or just <"", value> for literals
+		const std::pair<string, string> _left_attribute, _right_attribute;
+};
+
+class LessExpression : public Expression {
+	public:
+		LessExpression(const std::pair<string, string> left, const std::pair<string, string> right);
+
+		int tuple_quantity(const Table * table) const;
+		double cardinality(const Table* table) const;
+	private:
+		//contains <Table_name, attribute_name>
+		//or just <"", value> for literals
+		const std::pair<string, string> _left_attribute, _right_attribute;
 };
 
 class SelectionNode : public Table {

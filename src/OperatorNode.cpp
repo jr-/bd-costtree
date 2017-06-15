@@ -21,8 +21,8 @@ Table::Table(string name, int tuple_quantity) :
 	{}
 Table::~Table(){}
 
-Table::Table(const Table& to_copy) : _name(to_copy._name), _attributes(to_copy._attributes), _primary_key(to_copy._primary_key),  _tuple_quantity(to_copy._tuple_quantity), _foreign_keys(to_copy._foreign_keys), _primary_index(to_copy._primary_index), _secondary_indexes(to_copy._secondary_indexes), _ordered_by(to_copy._ordered_by)
-{}
+/*Table::Table(const Table& to_copy) : _name(to_copy._name), _attributes(to_copy._attributes), _primary_key(to_copy._primary_key),  _tuple_quantity(to_copy._tuple_quantity), _foreign_keys(to_copy._foreign_keys), _primary_index(to_copy._primary_index), _secondary_indexes(to_copy._secondary_indexes), _ordered_by(to_copy._ordered_by)
+{}*/
 
 int Table::best_access_cost() const
 {
@@ -59,6 +59,45 @@ void Table::ordered_by(string attribute)
 {
 	//attribute must be an attribute of this table
 }
+
+Expression::Expression(){}
+Expression::~Expression(){}
+
+AndExpression::AndExpression(const Expression* left, const Expression* right) : _left(left), _right(right) {}
+
+int AndExpression::tuple_quantity(const Table* table) const
+{
+	int nr = table->tuple_quantity();
+	double cardinalitites = _left->cardinality(table) * _right->cardinality(table);
+	return cardinalitites / nr;
+}
+
+double AndExpression::cardinality(const Table* table) const
+{
+	double cardinalitites = _left->cardinality(table) * _right->cardinality(table);
+	return cardinalitites / table->tuple_quantity();
+}
+
+OrExpression::OrExpression(const Expression* left, const Expression* right) : _left(left), _right(right) {}
+
+int OrExpression::tuple_quantity(const Table* table) const {}
+double OrExpression::cardinality(const Table* table) const {}
+
+EqualExpression::EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right):  _left_attribute(left), _right_attribute(right) {}
+int EqualExpression::tuple_quantity(const Table* table) const {}
+double EqualExpression::cardinality(const Table* table) const {}
+
+NotEqualExpression::NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+int NotEqualExpression::tuple_quantity(const Table* table) const {}
+double NotEqualExpression::cardinality(const Table* table) const {}
+
+GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+int GreaterExpression::tuple_quantity(const Table* table) const {}
+double GreaterExpression::cardinality(const Table* table) const {}
+
+LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+int LessExpression::tuple_quantity(const Table* table) const {}
+double LessExpression::cardinality(const Table* table) const {}
 
 NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
 {}
@@ -141,7 +180,7 @@ int Table::primary_index_access_cost() const
 	return 0; //TODO
 }
 
-SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection" + child->name(), expr->tuple_quantity()/*Should be the estimation from the expression*/), _child(child), _expression(expr)
+SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection" + child->name(), 0/*Should be the estimation from the expression*/), _child(child), _expression(expr)
 {}
 
 SelectionNode::~SelectionNode(){}
