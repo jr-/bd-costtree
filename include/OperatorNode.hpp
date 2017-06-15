@@ -15,7 +15,10 @@ enum type {
 	STRING, INT
 };
 
-class Expression {};
+class Expression {
+	public:
+		int tuple_quantity() const;
+};
 class AndExpression : public Expression {};
 class OrExpression : public Expression {};
 class EqualExpression: public Expression {};
@@ -30,6 +33,7 @@ extern int _nBuf;
 class Table {
 	public:
 		Table(string name, int tuple_quantity);
+		Table(const Table& to_copy);
 		virtual ~Table();
 
 		int best_access_cost() const;
@@ -43,6 +47,7 @@ class Table {
 		void add_primary_index(int n, int fi);
 		void ordered_by(string attribute);
 
+		string name()const {return _name;};
 		int tuple_quantity()const {return _tuple_quantity;};
 		int block_quantity()const {return ceil(_tuple_quantity / block_factor());};
 		int block_factor() const {return floor(_block_size / size());};
@@ -69,81 +74,75 @@ class Table {
 
 };
 
-class OperatorNode : public Table {
+class SelectionNode : public Table {
 
 	public:
-		OperatorNode();
-		virtual ~OperatorNode();
-
-		int best_access_cost();
-
-	protected:
-		const OperatorNode* _left, *_right;
-};
-
-class SelectionNode : public OperatorNode {
-
-	public:
-		SelectionNode(const OperatorNode* left, Expression expression);
+		SelectionNode(const Table* left, const Expression* expression);
 		virtual ~SelectionNode();
 
 		int best_access_cost();
 
 	private:
+		const Table *_child;
 		//tree containing the expression
-		Expression _expression;
+		const Expression* _expression;
 
 		int A1();
 		int A2(int bR);
 
 };
 
-class ProjectionNode : public OperatorNode {
+class ProjectionNode : public Table {
 
 	public:
-		ProjectionNode(const OperatorNode* left, deque<string, string> attributes);
+		ProjectionNode(const Table* left, deque<string, string> attributes);
 		virtual ~ProjectionNode();
 
 		int best_access_cost();
 
 	private:
+		const Table *_child;
 		//attributes<attr name, table name> attributes to project
 		deque<string, string> _attributes;
 
 };
 
-class ProductNode : public OperatorNode {
+class ProductNode : public Table {
 
 	public:
-		ProductNode(const OperatorNode* left, const OperatorNode* right);
+		ProductNode(const Table* left, const Table* right);
 		virtual ~ProductNode();
 
 		int best_access_cost();
 
+	private:
+		const Table *_left, *_right; //children
 };
 
-class JoinNode : public OperatorNode {
+class JoinNode : public Table {
 
 	public:
-		JoinNode(const OperatorNode* left, const OperatorNode* right, Expression expression);
+		JoinNode(const Table* left, const Table* right, const Expression* expression);
 		virtual ~JoinNode();
 
 		int best_access_cost();
 
 	private:
-		Expression _expression;
+		const Table *_left, *_right; //children
+		const Expression* _expression;
 
 };
 
-class NaturalJoinNode : public OperatorNode {
+class NaturalJoinNode : public Table {
 
 	public:
-		NaturalJoinNode(const OperatorNode* left, const OperatorNode* right);
+		NaturalJoinNode(const Table* left, const Table* right);
 		virtual ~NaturalJoinNode();
 
 		int best_access_cost();
 
 	private:
+		const Table *_left, *_right; //children
 		int A1();
 		int A2();
 		int A3();

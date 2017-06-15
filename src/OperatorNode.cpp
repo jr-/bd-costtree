@@ -15,14 +15,14 @@ class NotEqualExpression : public Expression {};
 class GreaterExpression : public Expression {};
 class LessExpression : public Expression {};*/
 
-OperatorNode::OperatorNode() : Table("", 0){}
-OperatorNode::~OperatorNode(){}
-
 Table::Table(string name, int tuple_quantity) :
 	_name(name),
 	_tuple_quantity(tuple_quantity)
 	{}
 Table::~Table(){}
+
+Table::Table(const Table& to_copy) : _name(to_copy._name), _attributes(to_copy._attributes), _primary_key(to_copy._primary_key),  _tuple_quantity(to_copy._tuple_quantity), _foreign_keys(to_copy._foreign_keys), _primary_index(to_copy._primary_index), _secondary_indexes(to_copy._secondary_indexes), _ordered_by(to_copy._ordered_by)
+{}
 
 int Table::best_access_cost() const
 {
@@ -60,11 +60,8 @@ void Table::ordered_by(string attribute)
 	//attribute must be an attribute of this table
 }
 
-NaturalJoinNode::NaturalJoinNode(const OperatorNode* left, const OperatorNode* right)
-{
-	this->_left = left;
-	this->_right = right;
-}
+NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
+{}
 
 NaturalJoinNode::~NaturalJoinNode(){}
 
@@ -106,7 +103,7 @@ int NaturalJoinNode::A2()
 	if(!_left->has_primary_index() && !_right->has_primary_index()){
 		return 0;
 	}
-	const OperatorNode* indexed, *no_index;
+	const Table* indexed, *no_index;
 	if(_left->has_primary_index()){
 		indexed = _left;
 		no_index = _right;
@@ -144,11 +141,8 @@ int Table::primary_index_access_cost() const
 	return 0; //TODO
 }
 
-SelectionNode::SelectionNode(const OperatorNode* left, Expression expr)
-{
-		this->_left = left;
-		this->_expression = expr;
-}
+SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection" + child->name(), expr->tuple_quantity()/*Should be the estimation from the expression*/), _child(child), _expression(expr)
+{}
 
 SelectionNode::~SelectionNode(){}
 
@@ -181,8 +175,8 @@ int SelectionNode::best_access_cost()
 */
 int SelectionNode::A1()
 {
-	int fR = _block_size / _left->size();
-	int bR = ceil(float(_left->tuple_quantity() / fR));
+	int fR = _block_size / _child->size();
+	int bR = ceil(float(_child->tuple_quantity() / fR));
 
 	return bR;
 }
@@ -207,7 +201,7 @@ int SelectionNode::A2(int bR)
 }
 
 /*
-class SelectionNode : public OperatorNode {
+class SelectionNode : public Table {
 
 	public:
 
@@ -219,10 +213,10 @@ class SelectionNode : public OperatorNode {
 
 };
 
-class ProjectionNode : public OperatorNode {
+class ProjectionNode : public Table {
 
 	public:
-		ProjectionNode(const OperatorNode* left, deque<string, string> attributes);
+		ProjectionNode(const Table* left, deque<string, string> attributes);
 		virtual ~ProjectionNode();
 
 		int best_access_cost();
@@ -233,20 +227,20 @@ class ProjectionNode : public OperatorNode {
 
 };
 
-class ProductNode : public OperatorNode {
+class ProductNode : public Table {
 
 	public:
-		ProductNode(const OperatorNode* left, const OperatorNode* right);
+		ProductNode(const Table* left, const Table* right);
 		virtual ~ProductNode();
 
 		int best_access_cost();
 
 };
 
-class JoinNode : public OperatorNode {
+class JoinNode : public Table {
 
 	public:
-		JoinNode(const OperatorNode* left, const OperatorNode* right, Expression expression);
+		JoinNode(const Table* left, const Table* right, Expression expression);
 		virtual ~JoinNode();
 
 		int best_access_cost();
@@ -256,7 +250,7 @@ class JoinNode : public OperatorNode {
 
 };
 
-class NaturalJoinNode : public OperatorNode {
+class NaturalJoinNode : public Table {
 
 	public:
 
