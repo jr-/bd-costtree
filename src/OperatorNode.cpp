@@ -84,12 +84,40 @@ int OrExpression::tuple_quantity(const Table* table) const {}
 double OrExpression::cardinality(const Table* table) const {}
 
 EqualExpression::EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right):  _left_attribute(left), _right_attribute(right) {}
-int EqualExpression::tuple_quantity(const Table* table) const {}
-double EqualExpression::cardinality(const Table* table) const {}
+
+int EqualExpression::tuple_quantity(const Table* table) const
+{
+	return this->cardinality(table) * table->tuple_quantity();
+}
+
+double EqualExpression::cardinality(const Table* table) const
+{
+	double cardinality;
+	if(_left_attribute.first == "") {
+		cardinality = table->attribute_cardinality(_right_attribute.second);
+	} else {
+		cardinality = table->attribute_cardinality(_left_attribute.second);
+	}
+	return cardinality;
+}
 
 NotEqualExpression::NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
-int NotEqualExpression::tuple_quantity(const Table* table) const {}
-double NotEqualExpression::cardinality(const Table* table) const {}
+
+int NotEqualExpression::tuple_quantity(const Table* table) const
+{
+	return table->tuple_quantity() - this->cardinality(table) * table->tuple_quantity();
+}
+
+double NotEqualExpression::cardinality(const Table* table) const
+{
+	double cardinality;
+	if(_left_attribute.first == "") {
+		cardinality = table->attribute_cardinality(_right_attribute.second);
+	} else {
+		cardinality = table->attribute_cardinality(_left_attribute.second);
+	}
+	return cardinality;
+}
 
 GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
 int GreaterExpression::tuple_quantity(const Table* table) const {}
