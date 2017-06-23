@@ -15,49 +15,82 @@ class NotEqualExpression : public Expression {};
 class GreaterExpression : public Expression {};
 class LessExpression : public Expression {};*/
 
-Table::Table(string name, int tuple_quantity) :
+Table::Table(string name, unsigned int tuple_quantity) :
 	_name(name),
-	_tuple_quantity(tuple_quantity)
+	_tuple_quantity(tuple_quantity),
+	_primary_index(std::pair<unsigned int, unsigned int>(0, 0))
 	{}
 Table::~Table(){}
 
 /*Table::Table(const Table& to_copy) : _name(to_copy._name), _attributes(to_copy._attributes), _primary_key(to_copy._primary_key),  _tuple_quantity(to_copy._tuple_quantity), _foreign_keys(to_copy._foreign_keys), _primary_index(to_copy._primary_index), _secondary_indexes(to_copy._secondary_indexes), _ordered_by(to_copy._ordered_by)
 {}*/
 
-int Table::best_access_cost() const
+unsigned int Table::best_access_cost() const
 {
 	//does this make sense for Table? Maybe not
     return 0;
 }
 
-void Table::add_attribute(string attribute_name, type attribute_type, int size, int variability)
+void Table::add_attribute(string attribute_name, type attribute_type, unsigned int size, unsigned int variability)
 {
 	//name must be unique
+	auto got = _attributes.find(attribute_name);
+	if(got != _attributes.end()) {
+		//attribute already exists, cant be inserted
+		//TODO should we raise an exception?
+		return;
+	}
+	auto attribute_characteristics = std::tuple<type, unsigned int, unsigned int>(attribute_type, size, variability);
+	auto to_add = std::pair<string, std::tuple<type, unsigned int, unsigned int>>(attribute_name, attribute_characteristics);
+	_attributes.insert(to_add);
 }
 
 void Table::add_primary_key(deque<string> primary_key)
 {
 	//all the members of primary_key must be attributes
+	for(string i : primary_key) {
+		if(_attributes.find(i) == _attributes.end()) {
+			//primary key must be an attribute!
+			continue;
+		}
+		_primary_key.push_back(i);
+	}
 }
 
 void Table::add_foreign_key(string attribute_name, string foreign_table_name)
 {
 	//attribute_name must be an attribute in this table
+	if(_attributes.find(attribute_name) == _attributes.end()) {
+		//attribute_name is not an attribute of this table
+		return;
+	}
+	_foreign_keys.insert(std::pair<string, string>(attribute_name, foreign_table_name));
 }
 
-void Table::add_secondary_index(string attribute_name, int n, int fi)
+void Table::add_secondary_index(string attribute_name, unsigned int n, unsigned int fi)
 {
-	//attribute_name must be the name of an attribute of this table. n and fi must be positive
+	//attribute_name must be the name of an attribute of this table.
+	if(_attributes.find(attribute_name) == _attributes.end()) {
+		//attribute_name is not an attribute of this table
+		return;
+	}
+	auto values = std::pair<unsigned int, unsigned int>(n, fi);
+	_secondary_indexes.insert(std::pair<string, std::pair<unsigned int, unsigned int>>(attribute_name, values));
 }
 
-void Table::add_primary_index(int n, int fi)
+void Table::add_primary_index(unsigned int n, unsigned int fi)
 {
-	//n and fi must be positive. unsigned int instead?
+	_primary_index = std::pair<unsigned int, unsigned int>(n, fi);
 }
 
 void Table::ordered_by(string attribute)
 {
 	//attribute must be an attribute of this table
+	if(_attributes.find(attribute) == _attributes.end()) {
+		//attribute_name is not an attribute of this table
+		return;
+	}
+	_ordered_by = attribute;
 }
 
 Expression::Expression(){}
@@ -87,7 +120,7 @@ EqualExpression::EqualExpression(const std::pair<string, string> left, const std
 
 int EqualExpression::tuple_quantity(const Table* table) const
 {
-	return this->cardinality(table) * table->tuple_quantity();
+	return this->cardinality(table);
 }
 
 double EqualExpression::cardinality(const Table* table) const
@@ -120,7 +153,12 @@ double NotEqualExpression::cardinality(const Table* table) const
 }
 
 GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
-int GreaterExpression::tuple_quantity(const Table* table) const {}
+
+int GreaterExpression::tuple_quantity(const Table* table) const
+{
+	return table->tuple_quantity() / 2;
+}
+
 double GreaterExpression::cardinality(const Table* table) const {}
 
 LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
@@ -203,7 +241,7 @@ int Table::size() const
 	return res;
 }
 
-int Table::primary_index_access_cost() const
+unsigned int Table::primary_index_access_cost() const
 {
 	return 0; //TODO
 }

@@ -21,19 +21,19 @@ extern int _nBuf;
 
 class Table {
 	public:
-		Table(string name, int tuple_quantity);
+		Table(string name, unsigned int tuple_quantity);
 		//Table(const Table& to_copy);
 		virtual ~Table();
 
-		int best_access_cost() const;
+		unsigned int best_access_cost() const;
 
 		//must be unique
-		void add_attribute(string attribute_name, type attribute_type, int size, int variability);
+		void add_attribute(string attribute_name, type attribute_type, unsigned int size, unsigned int variability);
 		//must be valid attributes already in the table
 		void add_primary_key(deque<string> primary_key);
 		void add_foreign_key(string attribute_name, string foreign_table_name);
-		void add_secondary_index(string attribute_name, int n, int fi);
-		void add_primary_index(int n, int fi);
+		void add_secondary_index(string attribute_name, unsigned int n, unsigned int fi);
+		void add_primary_index(unsigned int n, unsigned int fi);
 		void ordered_by(string attribute);
 
 		string name() const {return _name;};
@@ -41,24 +41,24 @@ class Table {
 		int block_quantity() const {return ceil(_tuple_quantity / block_factor());};
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
-		bool has_primary_index() const {return _primary_index == std::make_pair<int, int>(0,0);};
-		int primary_index_access_cost() const;
+		bool has_primary_index() const {return _primary_index != std::pair<unsigned int, unsigned int>(0,0);};
+		unsigned int primary_index_access_cost() const;
 		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
 
 	private:
 		string _name;
 		//attribute name indexes type, size in bytes and variability
-		unordered_map<string, std::tuple<type, int, int>> _attributes;
+		unordered_map<string, std::tuple<type, unsigned int, unsigned int>> _attributes;
 		//must contain members of attributes
 		deque<string> _primary_key;
 		//tuple quantity
-		int _tuple_quantity;
+		unsigned int _tuple_quantity;
 		//foreign keys. attribute name indexes table name
 		unordered_map<string, string> _foreign_keys;
 		//Does this table have a primary index? What is its N and Fi? If not, <0,0>
-		std::pair<int, int> _primary_index;
+		std::pair<unsigned int, unsigned int> _primary_index;
 		//secondary index<name, N, Fi>
-		unordered_map<string, std::pair<int, int>> _secondary_indexes;
+		unordered_map<string, std::pair<unsigned int, unsigned int>> _secondary_indexes;
 		//are the tuples ordered in disk by an attribute? If not, empty string
 		string _ordered_by;
 
