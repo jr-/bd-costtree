@@ -44,6 +44,7 @@ class Table {
 		bool has_primary_index() const {return _primary_index != std::pair<unsigned int, unsigned int>(0,0);};
 		unsigned int primary_index_access_cost() const;
 		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
 
 	private:
 		string _name;
@@ -161,15 +162,15 @@ class SelectionNode : public Table {
 class ProjectionNode : public Table {
 
 	public:
-		ProjectionNode(const Table* left, deque<string> attributes);
+		ProjectionNode(const Table* left, deque<std::pair<string, string>> attributes);
 		virtual ~ProjectionNode();
 
 		int best_access_cost();
 
 	private:
 		const Table *_child;
-		//attribs = tablename + attributename
-		deque<string> _attribs;
+		//tablename e attribute name
+		deque<std::pair<string, string>> _attribs;
 
 };
 

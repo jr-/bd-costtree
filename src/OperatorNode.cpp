@@ -317,8 +317,19 @@ int ProductNode::best_access_cost()
 	return res;
 }
 
-ProjectionNode::ProjectionNode(const Table* child, deque<string> attributes) : Table("Projection" + child->name(), 0), _child(child)
-{}
+ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), 0), _child(child), _attribs(attributes)
+{
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> at = child->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
+    std::tuple<type, unsigned int, unsigned int> atf;
+    for(auto &a : _attribs) {
+        got = at.find(a.first+a.second);
+        if ( got != at.end()) {
+            atf = got->second;
+            add_attribute(got->first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+        }
+    }
+}
 ProjectionNode::~ProjectionNode(){}
 
 int ProjectionNode::best_access_cost()
