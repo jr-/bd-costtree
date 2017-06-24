@@ -305,6 +305,27 @@ int SelectionNode::A2(int bR)
     return 0;
 }
 
+ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
+{}
+
+ProductNode::~ProductNode(){}
+
+int ProductNode::best_access_cost()
+{
+    int mult = _left->block_quantity() * _right->block_quantity();
+	int res = std::min<int>(_left->block_quantity() + mult, _right->block_quantity() + mult);
+	return res;
+}
+
+ProjectionNode::ProjectionNode(const Table* child, deque<string> attributes) : Table("Projection" + child->name(), 0), _child(child)
+{}
+ProjectionNode::~ProjectionNode(){}
+
+int ProjectionNode::best_access_cost()
+{
+    return _child->block_quantity();
+}
+
 /*
 class SelectionNode : public Table {
 

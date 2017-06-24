@@ -161,15 +161,15 @@ class SelectionNode : public Table {
 class ProjectionNode : public Table {
 
 	public:
-		ProjectionNode(const Table* left, deque<string, string> attributes);
+		ProjectionNode(const Table* left, deque<string> attributes);
 		virtual ~ProjectionNode();
 
 		int best_access_cost();
 
 	private:
 		const Table *_child;
-		//attributes<attr name, table name> attributes to project
-		deque<string, string> _attributes;
+		//attribs = tablename + attributename
+		deque<string> _attribs;
 
 };
 
