@@ -306,7 +306,20 @@ int SelectionNode::A2(int bR)
 }
 
 ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
-{}
+{
+    //adiciona os atributos dos 2 filhos na tabela do produto com seus nomes modificados tablename+attributename
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = left->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = left->get_attributes();
+    std::tuple<type, unsigned int, unsigned int> atf;
+    for(auto &a : lat){
+        atf = a.second;
+        add_attribute(left->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+    }
+    for(auto &a : rat){
+        atf = a.second;
+        add_attribute(right->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+    }
+}
 
 ProductNode::~ProductNode(){}
 
@@ -319,6 +332,7 @@ int ProductNode::best_access_cost()
 
 ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), 0), _child(child), _attribs(attributes)
 {
+    //procura os atributos da projecao na tabela do filho e adiciona na tabela da projecao
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> at = child->get_attributes();
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
     std::tuple<type, unsigned int, unsigned int> atf;
@@ -347,30 +361,6 @@ class SelectionNode : public Table {
 	private:
 		//tree containing the expression
 		Expression _expression;
-
-};
-
-class ProjectionNode : public Table {
-
-	public:
-		ProjectionNode(const Table* left, deque<string, string> attributes);
-		virtual ~ProjectionNode();
-
-		int best_access_cost();
-
-	private:
-		//attributes<attr name, table name> attributes to project
-		deque<string, string> _attributes;
-
-};
-
-class ProductNode : public Table {
-
-	public:
-		ProductNode(const Table* left, const Table* right);
-		virtual ~ProductNode();
-
-		int best_access_cost();
 
 };
 
