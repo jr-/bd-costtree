@@ -166,7 +166,9 @@ int LessExpression::tuple_quantity(const Table* table) const {}
 double LessExpression::cardinality(const Table* table) const {}
 
 NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
-{}
+{
+
+}
 
 NaturalJoinNode::~NaturalJoinNode(){}
 
@@ -202,6 +204,7 @@ int NaturalJoinNode::A1()
 	return res;
 }
 
+//nao precisa ser necessariamnete indice primario
 int NaturalJoinNode::A2()
 {
 	//when a2 cant be calculated, return 0
@@ -220,12 +223,45 @@ int NaturalJoinNode::A2()
 	res += no_index->tuple_quantity() * indexed->primary_index_access_cost();
 	return res;
 }
-
+//Se R e S estiverem fisicamente ordenadas pelos atributos de juncao
+//Ideia Geral: pega os atributos em comum e verifica se as duas tabelas estão ordenadas fisicamentes pelos atributos em comum
 int NaturalJoinNode::A3()
 {
-    return 0;
+    deque<string> j_attr;
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
+    bool l_ord, r_ord = false;
+    int result;
+    //pega os atributos com o mesmo nome para a juncao
+    for(auto &at : lat) {
+        got = rat.find(at.first);
+        if(got != lat.end()) {
+            j_attr.push_back(at.first);
+        }
+    }
+    //verifica se as tabelas estão ordenadas por estes atributos
+    //oq fazer no caso de ter 2 atributos em comum?
+    for(auto &ja : j_attr) {
+        if( ja == _left->get_ordered_by())
+            l_ord = true;
+        if( ja == _right->get_ordered_by())
+            r_ord = true;
+    }
+    //custoMJ
+    result = _left->block_quantity() + _right->block_quantity();
+    // custo das ordenacoes
+    if(!l_ord) {
+        int itres = (int)(log(_left->block_quantity()/ _nBuf) / log(_nBuf));
+        result += 2 * _left->block_quantity() * (itres + 1);
+    }
+    if(!r_ord) {
+        int itres = (int)(log(_right->block_quantity()/ _nBuf) / log(_nBuf));
+        result += 2 * _right->block_quantity() * (itres + 1);
+    }
+    return result;
 }
-
+//aplicada se existir um indice hash com a mesma funcao definido para os atributos de juncao das relacoes R e S
 int NaturalJoinNode::A4()
 {
     return 0;
@@ -240,9 +276,14 @@ int Table::size() const
 	}
 	return res;
 }
-
+//slide4 - pagina 5
+// primario arvore-B para atributo chave(caso a3 da seleção) = hIs + 1
+// indice primario arvore-B para atributo nao-chave(caso a4 da seleção) = hIs + teto(Cs(ai)/fs)
+// indice secundario arvore-B para atributo nao-chave(caso a6 seleção) = HIs + 1 + teto(Cs(ai))
+// indice hash = 1?
 unsigned int Table::primary_index_access_cost() const
 {
+
 	return 0; //TODO
 }
 
@@ -309,7 +350,7 @@ ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product
 {
     //adiciona os atributos dos 2 filhos na tabela do produto com seus nomes modificados tablename+attributename
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = left->get_attributes();
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = left->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = right->get_attributes();
     std::tuple<type, unsigned int, unsigned int> atf;
     for(auto &a : lat){
         atf = a.second;
