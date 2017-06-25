@@ -159,7 +159,10 @@ int GreaterExpression::tuple_quantity(const Table* table) const
 	return table->tuple_quantity() / 2;
 }
 
-double GreaterExpression::cardinality(const Table* table) const {}
+double GreaterExpression::cardinality(const Table* table) const
+{
+	return table->tuple_quantity() / 2;
+}
 
 LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
 int LessExpression::tuple_quantity(const Table* table) const {}

@@ -12,7 +12,7 @@ using std::deque;
 using std::unordered_map;
 
 enum type {
-	STRING, INT
+	STRING, INT, DATE
 };
 
 //global variable D:
@@ -33,6 +33,8 @@ class Table {
 		void add_primary_key(deque<string> primary_key);
 		void add_foreign_key(string attribute_name, string foreign_table_name);
 		void add_secondary_index(string attribute_name, unsigned int n, unsigned int fi);
+		void add_secondary_hash_index(string attribute_name)
+			{_secondary_indexes. insert(std::pair<string, std::pair<unsigned int, unsigned int>>(attribute_name, std::pair<unsigned int, unsigned int>(0 ,1)));}
 		void add_primary_index(unsigned int n, unsigned int fi);
 		void ordered_by(string attribute);
 
@@ -56,7 +58,7 @@ class Table {
 		unsigned int _tuple_quantity;
 		//foreign keys. attribute name indexes table name
 		unordered_map<string, string> _foreign_keys;
-		//Does this table have a primary index? What is its N and Fi? If not, <0,0>
+		//Does this table have a primary index? What is its N and Fi? If not, <0,0>. <0,1> indicate a hash index
 		std::pair<unsigned int, unsigned int> _primary_index;
 		//secondary index<name, N, Fi>
 		unordered_map<string, std::pair<unsigned int, unsigned int>> _secondary_indexes;
