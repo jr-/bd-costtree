@@ -47,6 +47,7 @@ class Table {
 		unsigned int primary_index_access_cost() const;
 		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
         unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
+        string get_ordered_by() const {return _ordered_by;};
 
 	private:
 		string _name;
