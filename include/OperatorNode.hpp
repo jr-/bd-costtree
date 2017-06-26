@@ -23,6 +23,7 @@ extern int _nBuf;
 
 class Table {
 	public:
+        Table();
 		Table(string name, unsigned int tuple_quantity);
 		//Table(const Table& to_copy);
 		virtual ~Table();
@@ -156,15 +157,18 @@ class LessExpression : public Expression, public FinalExpression {
 class SelectionNode : public Table {
 
 	public:
-		SelectionNode(const Table* left, const Expression* expression);
+        SelectionNode(const Expression* expression);
+		SelectionNode(Table* child, const Expression* expression);
 		virtual ~SelectionNode();
+        void set_child(Table* child) {_child = child; update();};
 
         int tuple_quantity() const;
 		int best_access_cost() const;
         int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
+        void update();
 
 	private:
-		const Table *_child;
+		Table *_child = nullptr;
 		//tree containing the expression
 		const Expression* _expression;
 };
@@ -172,14 +176,17 @@ class SelectionNode : public Table {
 class ProjectionNode : public Table {
 
 	public:
-		ProjectionNode(const Table* left, deque<std::pair<string, string>> attributes);
+        ProjectionNode(deque<std::pair<string, string>> attributes);
+		ProjectionNode(Table* left, deque<std::pair<string, string>> attributes);
 		virtual ~ProjectionNode();
+        void set_child(Table *child) {_child = child; update();};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
+        void update();
 
 	private:
-		const Table *_child;
+		Table *_child = nullptr;
 		//tablename e attribute name
 		deque<std::pair<string, string>> _attribs;
 
@@ -188,27 +195,35 @@ class ProjectionNode : public Table {
 class ProductNode : public Table {
 
 	public:
-		ProductNode(const Table* left, const Table* right);
+        ProductNode();
+		ProductNode(Table* left, Table* right);
 		virtual ~ProductNode();
+        void set_child_left(Table *left) {_left = left; update();};
+        void set_child_right(Table *right) {_right = right; update();};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
+        void update();
 
 	private:
-		const Table *_left, *_right; //children
+		Table *_left, *_right = nullptr; //children
 };
 
 class JoinNode : public Table {
 
 	public:
-		JoinNode(const Table* left, const Table* right, const Expression* expression);
+        JoinNode(const Expression* expression);
+		JoinNode(Table* left, Table* right, const Expression* expression);
 		virtual ~JoinNode();
+        void set_child_left(Table *left) {_left = left; update();};
+        void set_child_right(Table *right) {_right = right; update();};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
+        void update();
 
 	private:
-		const Table *_left, *_right; //children
+		Table *_left, *_right = nullptr; //children
 		const Expression* _expression;
         int A1() const;
         int A2() const;
@@ -219,14 +234,18 @@ class JoinNode : public Table {
 class NaturalJoinNode : public Table {
 
 	public:
-		NaturalJoinNode(const Table* left, const Table* right);
+        NaturalJoinNode();
+		NaturalJoinNode(Table* left, Table* right);
 		virtual ~NaturalJoinNode();
+        void set_child_left(Table *left) {_left = left; update();};
+        void set_child_right(Table *right) {_right = right; update();};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
+        void update();
 
 	private:
-		const Table *_left, *_right; //children
+		Table *_left, *_right = nullptr; //children
 		int A1() const;
 		int A2() const;
 		int A3() const;
