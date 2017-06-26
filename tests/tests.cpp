@@ -88,7 +88,7 @@ TEST(JoinOperator, BestAcessCostTest) {
     EXPECT_EQ(50, medicos.size());
 
     medicos.add_primary_key(deque<string>{"codm"});
-    medicos.add_primary_index(10, 10);
+    medicos.add_primary_index("codm", 10, 10);
     medicos.add_secondary_hash_index("especialidade");
     medicos.add_secondary_index("cidade", 5, 5);
 
@@ -138,7 +138,7 @@ TEST(ProductOperator, FullTest) {
     EXPECT_EQ(50, medicos.size());
 
     medicos.add_primary_key(deque<string>{"codm"});
-    medicos.add_primary_index(10, 10);
+    medicos.add_primary_index("codm", 10, 10);
     medicos.add_secondary_hash_index("especialidade");
     medicos.add_secondary_index("cidade", 5, 5);
 
