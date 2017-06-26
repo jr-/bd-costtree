@@ -9,6 +9,8 @@ using std::deque;
 using std::unordered_map;
 using std::pair;
 
+Table::Table() {}
+
 Table::Table(string name, unsigned int tuple_quantity) :
 	_name(name),
 	_tuple_quantity(tuple_quantity)
@@ -272,74 +274,84 @@ int LessExpression::best_access_cost(const Table * table) const
 {
 }
 
-NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("NaturalJoin" + left->name() + right->name(), 0), _left(left), _right(right)
+NaturalJoinNode::NaturalJoinNode() : Table() {}
+
+NaturalJoinNode::NaturalJoinNode(Table* left, Table* right) : Table("NaturalJoin" + left->name() + right->name(), 0), _left(left), _right(right)
 {
-    //lista de atributos com o mesmo nome
-    deque<string> j_attr;
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
-
-    //pega os atributos com o mesmo nome para a juncao && add right attributes sem pegar os duplicados
-    std::tuple<type, unsigned int, unsigned int> atf;
-    for(auto &at : rat) {
-        got = lat.find(at.first);
-        if(got != lat.end()) {
-            j_attr.push_back(at.first);
-        } else {
-            atf = at.second;
-            add_attribute(_right->name() + "." + at.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
-        }
-    }
-
-    //add attributes com os duplicados
-    for(auto &a : lat){
-        atf = a.second;
-        add_attribute(_left->name() + "." + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
-    }
-    //calcular tuple_quantity
-    if(j_attr.size() != 0){
-        //considerando que so tem 1 atributo em comum
-        string c_at = j_attr.at(0);
-        //2 - juncao por referencia fk(R) = pk(S)
-        unordered_map<string, string> fks = _left->get_fks();
-        auto gotf = fks.find(c_at);
-        if(gotf != fks.end()) {
-            _tuple_quantity = _left->tuple_quantity();
-            std::cout << _tuple_quantity << std::endl;
-        }
-        fks = _right->get_fks();
-        gotf = fks.find(c_at);
-        if(gotf != fks.end()) {
-            _tuple_quantity = _right->tuple_quantity();
-        }
-
-        if(_tuple_quantity == 0) {
-            bool l_unique, r_unique = false;
-
-            double l_card = _left->attribute_cardinality(c_at);
-            double r_card = _right->attribute_cardinality(c_at);
-            if(l_card == 1.0){
-                l_unique = true;
-            }
-            if(r_card == 1.0){
-                r_unique = true;
-            }
-            //3 - juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
-            if(l_unique && r_unique)
-                _tuple_quantity = std::min<int>(_left->tuple_quantity(), _right->tuple_quantity());
-
-            if(_tuple_quantity == 0) {
-                //4 - juncao por igualdade (atributos nao chave)
-                _tuple_quantity = std::min<int>(_left->tuple_quantity()*l_card, _right->tuple_quantity()*r_card);
-            }
-        }
-    } else {//1 - juncao natural sem atributo em comum nr * ns
-        _tuple_quantity = _left->tuple_quantity() * _right->tuple_quantity();
-    }
+    update();
 }
 
 NaturalJoinNode::~NaturalJoinNode(){}
+
+void NaturalJoinNode::update(){
+    if(_left != nullptr && _right != nullptr) {
+        _name = "NaturalJoin" + _left->name() + _right->name();
+        _tuple_quantity = 0;
+        //lista de atributos com o mesmo nome
+        deque<string> j_attr;
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
+
+        //pega os atributos com o mesmo nome para a juncao && add right attributes sem pegar os duplicados
+        std::tuple<type, unsigned int, unsigned int> atf;
+        for(auto &at : rat) {
+            got = lat.find(at.first);
+            if(got != lat.end()) {
+                j_attr.push_back(at.first);
+            } else {
+                atf = at.second;
+                add_attribute(_right->name() + "." + at.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+            }
+        }
+
+        //add attributes com os duplicados
+        for(auto &a : lat){
+            atf = a.second;
+            add_attribute(_left->name() + "." + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+        }
+        //calcular tuple_quantity
+        if(j_attr.size() != 0){
+            //considerando que so tem 1 atributo em comum
+            string c_at = j_attr.at(0);
+            //2 - juncao por referencia fk(R) = pk(S)
+            unordered_map<string, string> fks = _left->get_fks();
+            auto gotf = fks.find(c_at);
+            if(gotf != fks.end()) {
+                _tuple_quantity = _left->tuple_quantity();
+                std::cout << _tuple_quantity << std::endl;
+            }
+            fks = _right->get_fks();
+            gotf = fks.find(c_at);
+            if(gotf != fks.end()) {
+                _tuple_quantity = _right->tuple_quantity();
+            }
+
+            if(_tuple_quantity == 0) {
+                bool l_unique, r_unique = false;
+
+                double l_card = _left->attribute_cardinality(c_at);
+                double r_card = _right->attribute_cardinality(c_at);
+                if(l_card == 1.0){
+                    l_unique = true;
+                }
+                if(r_card == 1.0){
+                    r_unique = true;
+                }
+                //3 - juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
+                if(l_unique && r_unique)
+                    _tuple_quantity = std::min<int>(_left->tuple_quantity(), _right->tuple_quantity());
+
+                if(_tuple_quantity == 0) {
+                    //4 - juncao por igualdade (atributos nao chave)
+                    _tuple_quantity = std::min<int>(_left->tuple_quantity()*l_card, _right->tuple_quantity()*r_card);
+                }
+            }
+        } else {//1 - juncao natural sem atributo em comum nr * ns
+            _tuple_quantity = _left->tuple_quantity() * _right->tuple_quantity();
+        }
+    }
+}
 
 int NaturalJoinNode::best_access_cost() const
 {
@@ -422,7 +434,7 @@ int NaturalJoinNode::A3() const
     result = _left->block_quantity() + _right->block_quantity();
     // custo das ordenacoes
     if(!l_ord) {
-        int itres = (int)(log(_left->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = (log(_left->block_quantity()/ _nBuf) / log(_nBuf));
         result += 2 * _left->block_quantity() * (itres + 1);
     }
     if(!r_ord) {
@@ -462,10 +474,19 @@ unsigned int Table::secondary_index_access_cost(string attribute_name) const
 	return 0; //TODO
 }
 
-SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection(" + child->name() + ")", 0), _child(child), _expression(expr)
+SelectionNode::SelectionNode(const Expression* expr) : Table(), _expression(expr) {}
+
+SelectionNode::SelectionNode(Table* child, const Expression* expr) : Table("Selection(" + child->name() + ")", 0), _child(child), _expression(expr)
 {}
 
 SelectionNode::~SelectionNode(){}
+
+void SelectionNode::update()
+{
+    if(_child != nullptr) {
+        _name = "Selection(" + _child->name() + ")";
+    }
+}
 
 int SelectionNode::tuple_quantity() const
 {
@@ -526,23 +547,34 @@ int SelectionNode::A1() const
 //     return 0;
 // }
 
-ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
+ProductNode::ProductNode() : Table() {}
+
+ProductNode::ProductNode(Table* left, Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
 {
-    //adiciona os atributos dos 2 filhos na tabela do produto com seus nomes modificados tablename+attributename
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = left->get_attributes();
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = right->get_attributes();
-    std::tuple<type, unsigned int, unsigned int> atf;
-    for(auto &a : lat){
-        atf = a.second;
-        add_attribute(left->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
-    }
-    for(auto &a : rat){
-        atf = a.second;
-        add_attribute(right->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
-    }
+
 }
 
 ProductNode::~ProductNode(){}
+
+void ProductNode::update()
+{
+    if(_left != nullptr && _right != nullptr) {
+        _name = "Product" + _left->name() + _right->name();
+        _tuple_quantity = _left->tuple_quantity() * _right->tuple_quantity();
+        //adiciona os atributos dos 2 filhos na tabela do produto com seus nomes modificados tablename+attributename
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
+        std::tuple<type, unsigned int, unsigned int> atf;
+        for(auto &a : lat){
+            atf = a.second;
+            add_attribute(_left->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+        }
+        for(auto &a : rat){
+            atf = a.second;
+            add_attribute(_right->name() + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+        }
+    }
+}
 
 int ProductNode::best_access_cost() const
 {
@@ -551,33 +583,54 @@ int ProductNode::best_access_cost() const
 	return res;
 }
 
-ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), child->tuple_quantity()), _child(child), _attribs(attributes)
+ProjectionNode::ProjectionNode(deque<std::pair<string, string>> attributes) : Table(), _attribs(attributes) {}
+
+ProjectionNode::ProjectionNode(Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), child->tuple_quantity()), _child(child), _attribs(attributes)
 {
-    //procura os atributos da projecao na tabela do filho e adiciona na tabela da projecao
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> at = child->get_attributes();
-    unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
-    std::tuple<type, unsigned int, unsigned int> atf;
-    for(auto &a : _attribs) {
-        got = at.find(a.second);
-        if ( got != at.end()) {
-            atf = got->second;
-            add_attribute(a.first + "." + a.second, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+    update();
+}
+ProjectionNode::~ProjectionNode(){}
+
+void ProjectionNode::update()
+{
+    if (_child != nullptr) {
+        _name = "Projection" + _child->name();
+        _tuple_quantity = _child->tuple_quantity();
+        //procura os atributos da projecao na tabela do filho e adiciona na tabela da projecao
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> at = _child->get_attributes();
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
+        std::tuple<type, unsigned int, unsigned int> atf;
+        for(auto &a : _attribs) {
+            got = at.find(a.second);
+            if ( got != at.end()) {
+                atf = got->second;
+                add_attribute(a.first + "." + a.second, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+            }
         }
     }
 }
-ProjectionNode::~ProjectionNode(){}
 
 int ProjectionNode::best_access_cost() const
 {
     return _child->block_quantity();
 }
 
-JoinNode::JoinNode(const Table* left, const Table* right, const Expression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
+JoinNode::JoinNode(const Expression* expression) : Table(), _expression(expression) {}
+
+JoinNode::JoinNode(Table* left, Table* right, const Expression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
 {
 
 }
 
 JoinNode::~JoinNode(){}
+
+void JoinNode::update()
+{
+    if(_left != nullptr && _right != nullptr) {
+        _name = "Join" + _left->name() + _right->name();
+        //TODO Populate attributes and calc tuple_quantity
+    }
+}
 
 int JoinNode::best_access_cost() const
 {

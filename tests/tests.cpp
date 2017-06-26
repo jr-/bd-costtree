@@ -48,7 +48,9 @@ TEST(ProjectionOperator, FullTest) {
     medicos.add_attribute("especialidade", STRING, 10, 10);
     EXPECT_EQ(50, medicos.size());
 
-    ProjectionNode projection(&medicos, deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    ProjectionNode projection(deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    projection.set_child(&medicos);
+
     EXPECT_EQ(5, projection.best_access_cost());
     EXPECT_EQ(20, projection.size());
     EXPECT_EQ(100, projection.tuple_quantity());
@@ -94,7 +96,9 @@ TEST(ProductOperator, FullTest) {
 
     medicos.ordered_by("codm");
 
-    ProductNode product(&medicos, &consultas);
+    ProductNode product;
+    product.set_child_left(&medicos);
+    product.set_child_right(&consultas);
 
     EXPECT_EQ(155, product.best_access_cost());
 	EXPECT_EQ(100000, product.tuple_quantity());
@@ -141,12 +145,14 @@ TEST(NaturalJoinNode, FullTestpbcA1ptqfk) {
 
     medicos.ordered_by("codm");
 
-    NaturalJoinNode product(&medicos, &consultas);
+    NaturalJoinNode natural;
+    natural.set_child_left(&medicos);
+    natural.set_child_right(&consultas);
 
-    EXPECT_EQ(155, product.best_access_cost());//espera A1 best = 155 e A3 = 161
-	EXPECT_EQ(1000, product.tuple_quantity());
-	EXPECT_EQ(75, product.size());
-    EXPECT_EQ(77, product.block_quantity());
+    EXPECT_EQ(155, natural.best_access_cost());//espera A1 best = 155 e A3 = 161
+	EXPECT_EQ(1000, natural.tuple_quantity());
+	EXPECT_EQ(75, natural.size());
+    EXPECT_EQ(77, natural.block_quantity());
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;
@@ -191,9 +197,11 @@ TEST(NaturalJoinNode, bestcostA3) {
 
     medicos.ordered_by("codm");
 
-    NaturalJoinNode product(&medicos, &consultas);
+    NaturalJoinNode natural;
+    natural.set_child_left(&medicos);
+    natural.set_child_right(&consultas);
 
-    EXPECT_EQ(35, product.best_access_cost());//espera A1 best = 155 e A3 = 35
+    EXPECT_EQ(35, natural.best_access_cost());//espera A1 best = 155 e A3 = 35
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;
@@ -213,9 +221,11 @@ TEST(NaturalJoinNode, tqnocommonat) {
     Table medicos("Medicos", 100);
     medicos.add_attribute("codm", INT, 5, 100);
 
-    NaturalJoinNode product(&medicos, &consultas);
+    NaturalJoinNode natural;
+    natural.set_child_left(&medicos);
+    natural.set_child_right(&consultas);
 
-	EXPECT_EQ(100000, product.tuple_quantity());
+	EXPECT_EQ(100000, natural.tuple_quantity());
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;
@@ -235,9 +245,11 @@ TEST(NaturalJoinNode, tqunique) {
     medicos.add_attribute("codm", INT, 5, 100);
     medicos.add_attribute("nome", STRING, 15, 100);
 
-    NaturalJoinNode product(&medicos, &consultas);
+    NaturalJoinNode natural;
+    natural.set_child_left(&medicos);
+    natural.set_child_right(&consultas);
 
-	EXPECT_EQ(100, product.tuple_quantity());
+	EXPECT_EQ(100, natural.tuple_quantity());
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;
@@ -257,9 +269,11 @@ TEST(NaturalJoinNode, tqatnokey) {
     medicos.add_attribute("codm", INT, 5, 50);
     medicos.add_attribute("nome", STRING, 15, 100);
 
-    NaturalJoinNode product(&medicos, &consultas);
+    NaturalJoinNode natural;
+    natural.set_child_left(&medicos);
+    natural.set_child_right(&consultas);
 
-	EXPECT_EQ(200, product.tuple_quantity());
+	EXPECT_EQ(200, natural.tuple_quantity());
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;
@@ -307,7 +321,9 @@ TEST(JoinOperator, BestAcessCostTest) {
 
     EqualExpression eq = EqualExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"));
 
-    JoinNode join(&medicos, &consultas, &eq);
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
 
     EXPECT_EQ(155, join.best_access_cost());//tempo do A1 fazer na mao pros outros
 	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
@@ -356,17 +372,23 @@ TEST(FullTest, FullTest) {
 	medicos.ordered_by("codm");
 
 	EqualExpression selectionLeftExpression(std::pair<string, string>("Consultas", "data"), std::pair<string, string>("", "15/10/2007"));
-	SelectionNode selection_left(&consultas, &selectionLeftExpression);
-	ProjectionNode projection_left(&selection_left, deque<std::pair<string, string>>{std::pair<string, string>("Consultas", "codm")});
+	SelectionNode selection_left(&selectionLeftExpression);
+    selection_left.set_child(&consultas);
+	ProjectionNode projection_left(deque<std::pair<string, string>>{std::pair<string, string>("Consultas", "codm")});
+    projection_left.set_child(&selection_left);
 
 
 	NotEqualExpression not_equal(pair<string, string>("Medicos", "cidade"), pair<string, string>("", "Florianopolis"));
 	EqualExpression equal(pair<string, string>("Medicos", "especialidade"), pair<string, string>("", "ortopedista"));
 	AndExpression selectionRightExpression(&equal, &not_equal);
-	SelectionNode selection_right(&medicos, &selectionRightExpression);
-	ProjectionNode projection_right(&selection_right, deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+	SelectionNode selection_right(&selectionRightExpression);
+    selection_right.set_child(&medicos);
+	ProjectionNode projection_right(deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    projection_right.set_child(&selection_right);
 
-	NaturalJoinNode natural_join(&projection_left, &projection_right);
+	NaturalJoinNode natural_join;
+    natural_join.set_child_left(&projection_left);
+    natural_join.set_child_right(&projection_right);
 
 	EXPECT_EQ(5, selection_right.best_access_cost()); //A1
 	EXPECT_EQ(10, selection_right.tuple_quantity());
