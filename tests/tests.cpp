@@ -537,6 +537,18 @@ TEST(JoinOperator, sizeat) {
     _block_size = _old_block_size;
 }
 
+TEST(SelectionTest, SecondaryIndexTest) {
+	Table medicos("Medicos", 100);
+	medicos.add_attribute("cidade", STRING, 15, 50);
+	//medicos.add_secondary_index("cidade", 5, 5);
+	medicos.add_primary_key(deque<string>{"cidade"});
+	NotEqualExpression not_equal(pair<string, string>("Medicos", "cidade"), pair<string, string>("", "Florianopolis"));
+	SelectionNode sel(&not_equal);
+	sel.set_child(&medicos);
+	EXPECT_EQ(5, sel.best_access_cost()); //A1
+	EXPECT_EQ(10, sel.tuple_quantity());
+}
+
 TEST(FullTest, FullTest) {
 	int _old_nbuf = _nBuf;
 	int _old_block_size = _block_size;

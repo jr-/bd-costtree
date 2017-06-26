@@ -228,7 +228,7 @@ int NotEqualExpression::tuple_quantity(const Table* table) const
 	} else {
 		quantity = table->attribute_cardinality(_left_attribute.second);
 	}
-	return table->tuple_quantity() - quantity * table->tuple_quantity();
+	return table->tuple_quantity() - table->tuple_quantity() / quantity;
 }
 
 int NotEqualExpression::best_access_cost(const Table * table) const
@@ -536,6 +536,18 @@ unsigned int Table::secondary_index_access_cost(string attribute_name) const
 }
 
 SelectionNode::SelectionNode(const Expression* expr) : Table(), _expression(expr) {}
+
+SelectionNode::SelectionNode(string attribute, string literal, int expressionType)
+{
+	pair<string, string> left = pair<string, string>("Table", attribute);
+	auto right = pair<string, string>("", literal);
+	switch(expressionType) {
+		case 0: _expression = new EqualExpression(left, right); break;
+		case 1: _expression = new NotEqualExpression(left, right); break;
+		case 2: _expression = new GreaterExpression(left, right); break;
+		case 3: _expression = new LessExpression(left, right); break;
+	}
+}
 
 SelectionNode::SelectionNode(Table* child, const Expression* expr) : Table("Selection(" + child->name() + ")", 0), _child(child), _expression(expr)
 {}
