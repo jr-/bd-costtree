@@ -42,7 +42,7 @@ class Table {
 
 		string name() const {return _name;};
 
-		virtual int tuple_quantity() const {return _tuple_quantity;};
+		virtual int tuple_quantity() const;
 		int block_quantity() const {return ceil((double)_tuple_quantity / (double)block_factor());};
 
 		int block_factor() const {return floor(_block_size / size());};
@@ -68,7 +68,7 @@ class Table {
 		unsigned int _tuple_quantity;
 		//foreign keys. attribute name indexes table name
 		unordered_map<string, string> _foreign_keys;
-		//Does this table have a primary index? What is its N and Fi? If not, <0,0>. <0,1> indicate a hash index
+		//Does this table have a primary index? What is its N and Fi? If not, <0,0>. <0,1> indicates a hash index
 		unordered_map<string, std::pair<unsigned int, unsigned int>> _primary_indexes;
 		//secondary index<name, N, Fi>
 		unordered_map<string, std::pair<unsigned int, unsigned int>> _secondary_indexes;
@@ -162,16 +162,11 @@ class SelectionNode : public Table {
         int tuple_quantity() const;
 		int best_access_cost() const;
         int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
-		int tuple_quantity() const;
 
 	private:
 		const Table *_child;
 		//tree containing the expression
 		const Expression* _expression;
-
-		int A1() const;
-		//int A2(int bR);
-
 };
 
 class ProjectionNode : public Table {

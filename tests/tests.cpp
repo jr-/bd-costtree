@@ -36,6 +36,20 @@ TEST(ExpressionTest, ExpressionTest) {
 	EXPECT_EQ(100/2, gt.tuple_quantity(&tb));
 }
 
+TEST(ExpressionTest, IndexAccessCost) {
+	int _old_block_size = _block_size;
+	int _old_nbuf = _nBuf;
+	_nBuf = 5;
+	_block_size = 2048;
+	Table tb("Teste", 1000);
+	tb.add_attribute("codp", INT, 20, 1000);
+	tb.add_primary_index("codp", 5, 10);
+	EXPECT_EQ(3, tb.primary_index_access_cost("codp"));
+
+	_nBuf = _old_nbuf;
+	_block_size = _old_block_size;
+}
+
 TEST(ProjectionOperator, FullTest) {
     int _old_block_size = _block_size;
     _block_size = 1024;
@@ -53,6 +67,8 @@ TEST(ProjectionOperator, FullTest) {
     EXPECT_EQ(20, projection.size());
     EXPECT_EQ(100, projection.tuple_quantity());
     EXPECT_EQ(2, projection.block_quantity());
+
+	_block_size = _old_block_size;
 }
 
 TEST(ProductOperator, FullTest) {
@@ -100,9 +116,12 @@ TEST(ProductOperator, FullTest) {
 	EXPECT_EQ(100000, product.tuple_quantity());
 	EXPECT_EQ(80, product.size());
     EXPECT_EQ(8334, product.block_quantity());
+
+	_nBuf = _old_nbuf;
+	_block_size = _old_block_size;
 }
 
-TEST(NaturalJoinNode, FullTestpbcA1ptqfk) {
+TEST(NaturalJoinNode, FullTest) {
     int _old_nbuf = _nBuf;
     int _old_block_size = _block_size;
     _nBuf = 5;
@@ -313,7 +332,8 @@ TEST(JoinOperator, BestAcessCostTest) {
 	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
 	EXPECT_EQ(75, join.size());
 
-
+	_nBuf = _old_nbuf;
+	_block_size = _old_block_size;
 }
 
 TEST(FullTest, FullTest) {
