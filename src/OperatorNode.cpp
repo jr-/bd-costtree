@@ -214,7 +214,7 @@ NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table(
 
 NaturalJoinNode::~NaturalJoinNode(){}
 
-int NaturalJoinNode::best_access_cost()
+int NaturalJoinNode::best_access_cost() const
 {
 	//we need to log all these results
 	int res = A1();
@@ -238,7 +238,7 @@ int NaturalJoinNode::best_access_cost()
 	return res;
 }
 
-int NaturalJoinNode::A1()
+int NaturalJoinNode::A1() const
 {
 	//is always possible
 	int mult = _left->block_quantity() * _right->block_quantity();
@@ -247,7 +247,7 @@ int NaturalJoinNode::A1()
 }
 
 //nao precisa ser necessariamnete indice primario
-int NaturalJoinNode::A2()
+int NaturalJoinNode::A2() const
 {
 	//when a2 cant be calculated, return 0
 	/*if(!_left->has_primary_index() && !_right->has_primary_index()){
@@ -268,7 +268,7 @@ int NaturalJoinNode::A2()
 }
 //Se R e S estiverem fisicamente ordenadas pelos atributos de juncao
 //Ideia Geral: pega os atributos em comum e verifica se as duas tabelas estão ordenadas fisicamentes pelos atributos em comum
-int NaturalJoinNode::A3()
+int NaturalJoinNode::A3() const
 {
     deque<string> j_attr;
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
@@ -305,7 +305,7 @@ int NaturalJoinNode::A3()
     return result;
 }
 //aplicada se existir um indice hash com a mesma funcao definido para os atributos de juncao das relacoes R e S
-int NaturalJoinNode::A4()
+int NaturalJoinNode::A4() const
 {
     return 0;
 }
@@ -340,7 +340,7 @@ int SelectionNode::tuple_quantity() const
 	return _expression->tuple_quantity(this);
 }
 
-int SelectionNode::best_access_cost()
+int SelectionNode::best_access_cost() const
 {
 	int bR;
 
@@ -349,11 +349,11 @@ int SelectionNode::best_access_cost()
 
 	bR = res;
 
-	int a2 = A2(bR);
-	if(a2 != 0 && a2 < res) {
-		res = a2;
-		best = "A2";
-	}
+	// int a2 = A2(bR);
+	// if(a2 != 0 && a2 < res) {
+	// 	res = a2;
+	// 	best = "A2";
+	// }
 	return 0;
 }
 
@@ -367,7 +367,7 @@ int SelectionNode::best_access_cost()
  *
  * @return bR
 */
-int SelectionNode::A1()
+int SelectionNode::A1() const
 {
 	int fR = _block_size / _child->size();
 	int bR = ceil(float(_child->tuple_quantity() / fR));
@@ -383,16 +383,16 @@ int SelectionNode::A1()
  *
  *
 */
-int SelectionNode::A2(int bR)
-{
-	// qual a diferenca entre E e OU entre as expressoes, sempre considera a com menor custo pro resultado final?
-	// data <= 'valor' ^ data >= 'valor'
-	// (Expr ^ Expr) Expr
-	//for(exp:Expression)
-	//
-
-    return 0;
-}
+// int SelectionNode::A2(int bR)
+// {
+// 	// qual a diferenca entre E e OU entre as expressoes, sempre considera a com menor custo pro resultado final?
+// 	// data <= 'valor' ^ data >= 'valor'
+// 	// (Expr ^ Expr) Expr
+// 	//for(exp:Expression)
+// 	//
+//
+//     return 0;
+// }
 
 ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
 {
@@ -412,7 +412,7 @@ ProductNode::ProductNode(const Table* left, const Table* right) : Table("Product
 
 ProductNode::~ProductNode(){}
 
-int ProductNode::best_access_cost()
+int ProductNode::best_access_cost() const
 {
     int mult = _left->block_quantity() * _right->block_quantity();
 	int res = std::min<int>(_left->block_quantity() + mult, _right->block_quantity() + mult);
@@ -435,10 +435,11 @@ ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, strin
 }
 ProjectionNode::~ProjectionNode(){}
 
-int ProjectionNode::best_access_cost()
+int ProjectionNode::best_access_cost() const
 {
     return _child->block_quantity();
 }
+
 
 /*
 class SelectionNode : public Table {

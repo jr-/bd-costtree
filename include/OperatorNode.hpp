@@ -50,6 +50,7 @@ class Table {
 		deque<string> primary_key() const {return _primary_key;};
         unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
         string ordered_by() const {return _ordered_by;};
+        virtual int total_access_cost() const { return 0;};
 
 	protected:
 		string _name;
@@ -152,16 +153,21 @@ class SelectionNode : public Table {
 		SelectionNode(const Table* left, const Expression* expression);
 		virtual ~SelectionNode();
 
+<<<<<<< HEAD
 		int tuple_quantity() const;
 		int best_access_cost();
+=======
+		int best_access_cost() const;
+        int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
+>>>>>>> 06e876fb49e4247eeb9dbcd82cad97c0513cfc95
 
 	private:
 		const Table *_child;
 		//tree containing the expression
 		const Expression* _expression;
 
-		int A1();
-		int A2(int bR);
+		int A1() const;
+		//int A2(int bR);
 
 };
 
@@ -171,7 +177,8 @@ class ProjectionNode : public Table {
 		ProjectionNode(const Table* left, deque<std::pair<string, string>> attributes);
 		virtual ~ProjectionNode();
 
-		int best_access_cost();
+		int best_access_cost() const;
+        int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
 
 	private:
 		const Table *_child;
@@ -186,7 +193,8 @@ class ProductNode : public Table {
 		ProductNode(const Table* left, const Table* right);
 		virtual ~ProductNode();
 
-		int best_access_cost();
+		int best_access_cost() const;
+        int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
 
 	private:
 		const Table *_left, *_right; //children
@@ -198,7 +206,8 @@ class JoinNode : public Table {
 		JoinNode(const Table* left, const Table* right, const Expression* expression);
 		virtual ~JoinNode();
 
-		int best_access_cost();
+		int best_access_cost() const;
+        int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
 
 	private:
 		const Table *_left, *_right; //children
@@ -212,14 +221,15 @@ class NaturalJoinNode : public Table {
 		NaturalJoinNode(const Table* left, const Table* right);
 		virtual ~NaturalJoinNode();
 
-		int best_access_cost();
+		int best_access_cost() const;
+        int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
 
 	private:
 		const Table *_left, *_right; //children
-		int A1();
-		int A2();
-		int A3();
-		int A4();
+		int A1() const;
+		int A2() const;
+		int A3() const;
+		int A4() const;
 };
 
 #endif  // OPERATOR_NODE_HPP
