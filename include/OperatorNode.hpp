@@ -188,10 +188,12 @@ class SelectionNode : public Table {
 class ProjectionNode : public Table {
 
 	public:
+        ProjectionNode(string expression2p);
         ProjectionNode(deque<std::pair<string, string>> attributes);
 		ProjectionNode(Table* left, deque<std::pair<string, string>> attributes);
 		virtual ~ProjectionNode();
         void set_child(Table *child) {_child = child; update();};
+        void set_projattributes(deque<std::pair<string, string>> attributes) { _attribs = attributes;};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
@@ -224,11 +226,13 @@ class ProductNode : public Table {
 class JoinNode : public Table {
 
 	public:
-        JoinNode(const JoinExpression* expression);
-		JoinNode(Table* left, Table* right, const JoinExpression* expression);
+        JoinNode(string expression2p);
+        JoinNode(JoinExpression* expression);
+		JoinNode(Table* left, Table* right, JoinExpression* expression);
 		virtual ~JoinNode();
         void set_child_left(Table *left) {_left = left; update();};
         void set_child_right(Table *right) {_right = right; update();};
+        void set_join_exp(JoinExpression *j_exp) { _expression = j_exp;};
 
 		int best_access_cost() const;
         int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
@@ -236,7 +240,7 @@ class JoinNode : public Table {
 
 	private:
 		Table *_left, *_right = nullptr; //children
-		const JoinExpression* _expression;
+		JoinExpression* _expression;
         int A1() const;
         int A2() const;
         int A3() const;
