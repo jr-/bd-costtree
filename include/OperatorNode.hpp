@@ -42,13 +42,15 @@ class Table {
 
 		string name() const {return _name;};
 
-		int tuple_quantity() const {return _tuple_quantity;};
+		virtual int tuple_quantity() const {return _tuple_quantity;};
 		int block_quantity() const {return ceil((double)_tuple_quantity / (double)block_factor());};
 
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
 		pair<unsigned int, unsigned int> primary_index(string attribute_name) const;
+		pair<unsigned int, unsigned int> secondary_index(string attribute_name) const;
 		unsigned int primary_index_access_cost(string attribute_name) const;
+		unsigned int secondary_index_access_cost(string attribute_name) const;
 		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
 		deque<string> primary_key() const {return _primary_key;};
         unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
@@ -102,52 +104,52 @@ class OrExpression : public Expression {
 		const Expression *_left, *_right;
 };
 
-class EqualExpression: public Expression {
+class FinalExpression {
+	public:
+		FinalExpression(const std::pair<string, string> left, const std::pair<string, string> right) :
+			_left_attribute(left), _right_attribute(right)
+		{};
+		virtual ~FinalExpression() {};
+
+		virtual int best_access_cost(const Table * table) const;
+	protected:
+		//contains <Table_name, attribute_name>
+		//or just <"", value> for literals
+		const std::pair<string, string> _left_attribute, _right_attribute;
+};
+
+class EqualExpression: public Expression, public FinalExpression {
 	public:
 		EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
 		int best_access_cost(const Table * table) const;
-	private:
-		//contains <Table_name, attribute_name>
-		//or just <"", value> for literals
-		const std::pair<string, string> _left_attribute, _right_attribute;
 };
 
-class NotEqualExpression : public Expression {
+class NotEqualExpression : public Expression, public FinalExpression {
 	public:
 		NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
 		int best_access_cost(const Table * table) const;
-	private:
-		//contains <Table_name, attribute_name>
-		//or just <"", value> for literals
-		const std::pair<string, string> _left_attribute, _right_attribute;
 };
 
-class GreaterExpression : public Expression {
+//The attribute must be on the left and the literal on the right!
+class GreaterExpression : public Expression, public FinalExpression {
 	public:
 		GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
 		int best_access_cost(const Table * table) const;
-	private:
-		//contains <Table_name, attribute_name>
-		//or just <"", value> for literals
-		const std::pair<string, string> _left_attribute, _right_attribute;
 };
 
-class LessExpression : public Expression {
+//The attribute must be on the left and the literal on the right!
+class LessExpression : public Expression, public FinalExpression {
 	public:
 		LessExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
 		int best_access_cost(const Table * table) const;
-	private:
-		//contains <Table_name, attribute_name>
-		//or just <"", value> for literals
-		const std::pair<string, string> _left_attribute, _right_attribute;
 };
 
 class SelectionNode : public Table {
@@ -158,6 +160,7 @@ class SelectionNode : public Table {
 
 		int best_access_cost() const;
         int total_access_cost() const {return _child->total_access_cost() + best_access_cost();};
+		int tuple_quantity() const;
 
 	private:
 		const Table *_child;

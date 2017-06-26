@@ -9,14 +9,6 @@ using std::deque;
 using std::unordered_map;
 using std::pair;
 
-/*class Expression {};
-class AndExpression : public Expression {};
-class OrExpression : public Expression {};
-class EqualExpression: public Expression {};
-class NotEqualExpression : public Expression {};
-class GreaterExpression : public Expression {};
-class LessExpression : public Expression {};*/
-
 Table::Table(string name, unsigned int tuple_quantity) :
 	_name(name),
 	_tuple_quantity(tuple_quantity)
@@ -98,6 +90,14 @@ pair<unsigned int, unsigned int> Table::primary_index(string attribute_name) con
 	return _primary_indexes.at(attribute_name);
 }
 
+pair<unsigned int, unsigned int> Table::secondary_index(string attribute_name) const
+{
+	if(_secondary_indexes.find(attribute_name) == _secondary_indexes.end()) {
+		return pair<unsigned int, unsigned int>(0, 0);
+	}
+	return _secondary_indexes.at(attribute_name);
+}
+
 void Table::ordered_by(string attribute)
 {
 	//attribute must be an attribute of this table
@@ -136,7 +136,7 @@ int OrExpression::best_access_cost(const Table * table) const
 	return _left->best_access_cost(table) + _right->best_access_cost(table);
 }
 
-EqualExpression::EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right):  _left_attribute(left), _right_attribute(right) {}
+EqualExpression::EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right):  FinalExpression(left, right) {}
 
 int EqualExpression::tuple_quantity(const Table* table) const
 {
@@ -150,6 +150,11 @@ int EqualExpression::tuple_quantity(const Table* table) const
 }
 
 int EqualExpression::best_access_cost(const Table * table) const
+{
+	return FinalExpression::best_access_cost(table);
+}
+
+int FinalExpression::best_access_cost(const Table * table) const
 {
 	deque<pair<int, string>> results;
 	pair<int, string> a1 = pair<int, string>(table->block_quantity(), "A1");
@@ -166,10 +171,40 @@ int EqualExpression::best_access_cost(const Table * table) const
 		auto a2 = pair<int, string>(calc_a2, "A2");
 		results.push_back(a2);
 	}
-	//A3 e A4
+	if(table->primary_index(attribute) != pair<unsigned int, unsigned int>(0,0)) {//A3 and A4
+		if(deque<string>{attribute} == table->primary_key()) { //A3
+			int calc_a3 = table->primary_index_access_cost(attribute) + 1;
+			auto a3 = pair<int, string>(calc_a3, "A3");
+			results.push_back(a3);
+		} else { //A4
+			int calc_a4 = table->primary_index_access_cost(attribute) + ceil(table->attribute_cardinality(attribute)/table->block_factor());
+			auto a4 = pair<int, string>(calc_a4, "A4");
+			results.push_back(a4);
+		}
+	}
+	if(table->secondary_index(attribute) != pair<unsigned int, unsigned int>(0,0)) { //A5 and A6
+		if(deque<string>{attribute} == table->primary_key()) { //A5
+			int calc_a5 = table->secondary_index_access_cost(attribute) + 1;
+			auto a5 = pair<int, string>(calc_a5, "A5");
+			results.push_back(a5);
+		} else { //A6
+			int calc_a6 = table->secondary_index_access_cost(attribute) + 1;
+			calc_a6 += ceil(table->attribute_cardinality(attribute));
+			auto a6 = pair<int, string>(calc_a6, "A6");
+			results.push_back(a6);
+		}
+	}
+	auto best = results.back();
+	results.pop_back();
+	for(auto i: results) {
+		if(i.first < best.first) {
+			best = i;
+		}
+	}
+	return best.first;
 }
 
-NotEqualExpression::NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+NotEqualExpression::NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right) : FinalExpression(left, right) {}
 
 int NotEqualExpression::tuple_quantity(const Table* table) const
 {
@@ -184,9 +219,10 @@ int NotEqualExpression::tuple_quantity(const Table* table) const
 
 int NotEqualExpression::best_access_cost(const Table * table) const
 {
+	return FinalExpression::best_access_cost(table);
 }
 
-GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : FinalExpression(left, right) {}
 
 int GreaterExpression::tuple_quantity(const Table* table) const
 {
@@ -195,9 +231,37 @@ int GreaterExpression::tuple_quantity(const Table* table) const
 
 int GreaterExpression::best_access_cost(const Table * table) const
 {
+	deque<pair<int, string>> results;
+	pair<int, string> a1 = pair<int, string>(table->block_quantity(), "A1");
+	results.push_back(a1);
+	string attribute = _left_attribute.second;
+	if(attribute == table->ordered_by()) { //A2
+		int calc_a2 = ceil(log2(table->block_quantity()));
+		if(deque<string>{attribute} != table->primary_key()) {
+			calc_a2 += ceil(table->attribute_cardinality(attribute)/table->block_factor()) - 1;
+		}
+		calc_a2 += ceil(((double) table->block_quantity()) / 2);
+		auto a2 = pair<int, string>(calc_a2, "A2");
+		results.push_back(a2);
+	}
+	if(table->primary_index(attribute) != pair<unsigned int, unsigned int>(0,0)) {//A7
+		int calc_a7 = table->primary_index_access_cost(attribute);
+		calc_a7 += ceil(((double) table->block_quantity()) / 2);
+		auto a7 = pair<int, string>(calc_a7, "A7");
+		results.push_back(a7);
+	}
+
+	auto best = results.back();
+	results.pop_back();
+	for(auto i: results) {
+		if(i.first < best.first) {
+			best = i;
+		}
+	}
+	return best.first;
 }
 
-LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : FinalExpression(left, right) {}
 
 int LessExpression::tuple_quantity(const Table* table) const
 {
@@ -346,6 +410,11 @@ int Table::size() const
 unsigned int Table::primary_index_access_cost(string attribute_name) const
 {
 
+	return 0; //TODO
+}
+
+unsigned int Table::secondary_index_access_cost(string attribute_name) const
+{
 	return 0; //TODO
 }
 
