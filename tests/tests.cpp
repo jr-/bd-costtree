@@ -102,7 +102,7 @@ TEST(ProductOperator, FullTest) {
     EXPECT_EQ(8334, product.block_quantity());
 }
 
-TEST(NaturalJoinNode, FullTestptqfk) {
+TEST(NaturalJoinNode, FullTestpbcA1ptqfk) {
     int _old_nbuf = _nBuf;
     int _old_block_size = _block_size;
     _nBuf = 5;
@@ -143,10 +143,57 @@ TEST(NaturalJoinNode, FullTestptqfk) {
 
     NaturalJoinNode product(&medicos, &consultas);
 
-    EXPECT_EQ(155, product.best_access_cost());//considerando só o A1 no momento
+    EXPECT_EQ(155, product.best_access_cost());//espera A1 best = 155 e A3 = 161
 	EXPECT_EQ(1000, product.tuple_quantity());
 	EXPECT_EQ(75, product.size());
     EXPECT_EQ(77, product.block_quantity());
+
+    _nBuf = _old_nbuf;
+    _block_size = _old_block_size;
+}
+
+TEST(NaturalJoinNode, bestcostA3) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_attribute("codp", INT, 10, 450);
+    consultas.add_attribute("data", DATE, 10, 300);
+    consultas.add_attribute("hora", INT, 5, 15);
+
+    EXPECT_EQ(30, consultas.size());
+
+    consultas.add_secondary_index("codm", 5, 5);
+    consultas.add_secondary_index("codp", 5, 5);
+    consultas.add_secondary_index("data", 5, 5);
+    consultas.add_secondary_hash_index("codm");
+    consultas.add_secondary_hash_index("codp");
+
+    consultas.ordered_by("codm");
+    consultas.add_foreign_key("codm", "Medicos");
+    consultas.add_foreign_key("codp", "Pacientes");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    medicos.add_primary_key(deque<string>{"codm"});
+	medicos.add_primary_index("codm", 10, 10);
+    medicos.add_secondary_hash_index("especialidade");
+    medicos.add_secondary_index("cidade", 5, 5);
+
+    medicos.ordered_by("codm");
+
+    NaturalJoinNode product(&medicos, &consultas);
+
+    EXPECT_EQ(35, product.best_access_cost());//espera A1 best = 155 e A3 = 35
 
     _nBuf = _old_nbuf;
     _block_size = _old_block_size;

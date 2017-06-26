@@ -362,7 +362,7 @@ int NaturalJoinNode::A3() const
         result += 2 * _left->block_quantity() * (itres + 1);
     }
     if(!r_ord) {
-        int itres = (int)(log(_right->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = (log(_right->block_quantity()/ _nBuf) / log(_nBuf));
         result += 2 * _right->block_quantity() * (itres + 1);
     }
     return result;
