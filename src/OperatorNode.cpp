@@ -425,6 +425,11 @@ int NaturalJoinNode::A1() const
 }
 
 //nao precisa ser necessariamnete indice primario
+//slide4 - pagina 5
+// primario arvore-B para atributo chave(caso a3 da seleção) = hIs + 1
+// indice primario arvore-B para atributo nao-chave(caso a4 da seleção) = hIs + teto(Cs(ai)/fs)
+// indice secundario arvore-B para atributo nao-chave(caso a6 seleção) = HIs + 1 + teto(Cs(ai))
+// indice hash = 1?
 int NaturalJoinNode::A2() const
 {
 	//when a2 cant be calculated, return 0
@@ -558,25 +563,6 @@ int SelectionNode::best_access_cost() const
 	return _expression->best_access_cost(_child);
 }
 
-/*
- * A2 = teto[log2 bR] + teto[Cr(ai)/fR] -1 ou teto[log2 bR] se ai eh chave
- * Cr(ai) = nR/VR(ai)
- * fR = piso[tbloco/tR] fator de bloco table
- *
- *
- *
-*/
-// int SelectionNode::A2(int bR)
-// {
-// 	// qual a diferenca entre E e OU entre as expressoes, sempre considera a com menor custo pro resultado final?
-// 	// data <= 'valor' ^ data >= 'valor'
-// 	// (Expr ^ Expr) Expr
-// 	//for(exp:Expression)
-// 	//
-//
-//     return 0;
-// }
-
 ProductNode::ProductNode() : Table() {}
 
 ProductNode::ProductNode(Table* left, Table* right) : Table("Product" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
@@ -645,9 +631,9 @@ int ProjectionNode::best_access_cost() const
     return _child->block_quantity();
 }
 
-JoinNode::JoinNode(const Expression* expression) : Table(), _expression(expression) {}
+JoinNode::JoinNode(const JoinExpression* expression) : Table(), _expression(expression) {}
 
-JoinNode::JoinNode(Table* left, Table* right, const Expression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
+JoinNode::JoinNode(Table* left, Table* right, const JoinExpression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
 {
 
 }
@@ -658,7 +644,70 @@ void JoinNode::update()
 {
     if(_left != nullptr && _right != nullptr) {
         _name = "Join" + _left->name() + _right->name();
+        _tuple_quantity = 0;
         //TODO Populate attributes and calc tuple_quantity
+
+        std::pair<string, string> left_at_name = _expression->left_at();
+        std::pair<string, string> right_at_name = _expression->right_at();
+        JoinExpression::JoinExpressionOperator operator_type = _expression->operator_type();
+
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
+        unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
+
+        //pega os atributos com o mesmo nome para a juncao && add right attributes sem pegar os duplicados
+        std::tuple<type, unsigned int, unsigned int> atf;
+        for(auto &at : rat) {
+            if(at.first != right_at_name.second) {
+                atf = at.second;
+                add_attribute(_right->name() + "." + at.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+            }
+        }
+
+        //add attributes com os duplicados
+        for(auto &a : lat){
+            atf = a.second;
+            add_attribute(_left->name() + "." + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+        }
+
+        //calcular tuple_quantity
+        //considerando que so tem 1 expressao
+        if(operator_type == JoinExpression::JoinExpressionOperator::Equal) {
+            //2 - juncao por referencia fk(R) = pk(S)
+            unordered_map<string, string> fks = _left->get_fks();
+            auto gotf = fks.find(left_at_name.second);
+            if(gotf != fks.end()) {
+                _tuple_quantity = _left->tuple_quantity();
+                std::cout << _tuple_quantity << std::endl;
+            }
+            fks = _right->get_fks();
+            gotf = fks.find(right_at_name.second);
+            if(gotf != fks.end()) {
+                _tuple_quantity = _right->tuple_quantity();
+            }
+
+            if(_tuple_quantity == 0) {
+                bool l_unique, r_unique = false;
+
+                double l_card = _left->attribute_cardinality(left_at_name.second);
+                double r_card = _right->attribute_cardinality(right_at_name.second);
+                if(l_card == 1.0){
+                    l_unique = true;
+                }
+                if(r_card == 1.0){
+                    r_unique = true;
+                }
+                //3 - juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
+                if(l_unique && r_unique)
+                    _tuple_quantity = std::min<int>(_left->tuple_quantity(), _right->tuple_quantity());
+
+                if(_tuple_quantity == 0) {
+                    //4 - juncao por igualdade (atributos nao chave)
+                    _tuple_quantity = std::min<int>(_left->tuple_quantity()*l_card, _right->tuple_quantity()*r_card);
+                }
+            }
+        } else {// 5 - juncao por desigualdade
+            _tuple_quantity = (_left->tuple_quantity()*(_right->tuple_quantity()/2) + _right->tuple_quantity()*(_left->tuple_quantity()/2))/2;
+        }
     }
 }
 
@@ -701,7 +750,27 @@ int JoinNode::A2() const
 
 int JoinNode::A3() const
 {
-    return 0;
+    std::pair<string, string> left_at_name = _expression->left_at();
+    std::pair<string, string> right_at_name = _expression->right_at();
+    JoinExpression::JoinExpressionOperator operator_type = _expression->operator_type();
+    bool l_ord, r_ord = false;
+    int result = 0;
+    if( left_at_name.second == _left->ordered_by())
+        l_ord = true;
+    if( right_at_name.second == _right->ordered_by())
+        r_ord = true;
+    //custoMJ
+    result = _left->block_quantity() + _right->block_quantity();
+    // custo das ordenacoes
+    if(!l_ord) {
+        double itres = (log(_left->block_quantity()/ _nBuf) / log(_nBuf));
+        result += 2 * _left->block_quantity() * (itres + 1);
+    }
+    if(!r_ord) {
+        double itres = (log(_right->block_quantity()/ _nBuf) / log(_nBuf));
+        result += 2 * _right->block_quantity() * (itres + 1);
+    }
+    return result;
 }
 
 int JoinNode::A4() const

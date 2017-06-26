@@ -298,7 +298,92 @@ TEST(NaturalJoinNode, tqatnokey) {
     _block_size = _old_block_size;
 }
 
-TEST(JoinOperator, BestAcessCostTest) {
+TEST(JoinOperator, tqref) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_foreign_key("codm", "Medicos");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+}
+
+TEST(JoinOperator, tqunique) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 1000);
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+	EXPECT_EQ(100, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+}
+
+TEST(JoinOperator, tqeqnunique) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 100);
+    consultas.add_attribute("codm", INT, 5, 50);
+
+    Table medicos("Medicos", 1000);
+    medicos.add_attribute("codm", INT, 5, 1000);
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+	EXPECT_EQ(200, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+}
+
+TEST(JoinOperator, tqneqnunique) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 200);
+    consultas.add_attribute("codm", INT, 5, 50);
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::NotEqual);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+	EXPECT_EQ(10000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+}
+
+TEST(JoinOperator, bacA1) {
     int _old_nbuf = _nBuf;
     int _old_block_size = _block_size;
     _nBuf = 5;
@@ -332,24 +417,124 @@ TEST(JoinOperator, BestAcessCostTest) {
 
     medicos.add_primary_key(deque<string>{"codm"});
 	medicos.add_primary_index("codm", 10, 10);
-
     medicos.add_secondary_hash_index("especialidade");
     medicos.add_secondary_index("cidade", 5, 5);
 
     medicos.ordered_by("codm");
 
-    EqualExpression eq = EqualExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"));
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::NotEqual);
 
     JoinNode join(&eq);
     join.set_child_left(&medicos);
     join.set_child_right(&consultas);
 
-    EXPECT_EQ(155, join.best_access_cost());//tempo do A1 fazer na mao pros outros
-	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
-	EXPECT_EQ(75, join.size());
+    EXPECT_EQ(155, join.best_access_cost());//espera A1 best = 155 e A3 = 161
 
-	_nBuf = _old_nbuf;
-	_block_size = _old_block_size;
+    _nBuf = _old_nbuf;
+    _block_size = _old_block_size;
+}
+
+TEST(JoinOperator, bacA3) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_attribute("codp", INT, 10, 450);
+    consultas.add_attribute("data", DATE, 10, 300);
+    consultas.add_attribute("hora", INT, 5, 15);
+
+    EXPECT_EQ(30, consultas.size());
+
+    consultas.add_secondary_index("codm", 5, 5);
+    consultas.add_secondary_index("codp", 5, 5);
+    consultas.add_secondary_index("data", 5, 5);
+    consultas.add_secondary_hash_index("codm");
+    consultas.add_secondary_hash_index("codp");
+
+    consultas.ordered_by("codm");
+    consultas.add_foreign_key("codm", "Medicos");
+    consultas.add_foreign_key("codp", "Pacientes");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    medicos.add_primary_key(deque<string>{"codm"});
+	medicos.add_primary_index("codm", 10, 10);
+    medicos.add_secondary_hash_index("especialidade");
+    medicos.add_secondary_index("cidade", 5, 5);
+
+    medicos.ordered_by("codm");
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::NotEqual);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+    EXPECT_EQ(35, join.best_access_cost());//espera A1 best = 155 e A3 = 35
+
+    _nBuf = _old_nbuf;
+    _block_size = _old_block_size;
+}
+
+TEST(JoinOperator, sizeat) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_attribute("codp", INT, 10, 450);
+    consultas.add_attribute("data", DATE, 10, 300);
+    consultas.add_attribute("hora", INT, 5, 15);
+
+    EXPECT_EQ(30, consultas.size());
+
+    consultas.add_secondary_index("codm", 5, 5);
+    consultas.add_secondary_index("codp", 5, 5);
+    consultas.add_secondary_index("data", 5, 5);
+    consultas.add_secondary_hash_index("codm");
+    consultas.add_secondary_hash_index("codp");
+
+    consultas.ordered_by("codm");
+    consultas.add_foreign_key("codm", "Medicos");
+    consultas.add_foreign_key("codp", "Pacientes");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    medicos.add_primary_key(deque<string>{"codm"});
+	medicos.add_primary_index("codm", 10, 10);
+    medicos.add_secondary_hash_index("especialidade");
+    medicos.add_secondary_index("cidade", 5, 5);
+
+    medicos.ordered_by("codm");
+
+    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::NotEqual);
+
+    JoinNode join(&eq);
+    join.set_child_left(&medicos);
+    join.set_child_right(&consultas);
+
+    EXPECT_EQ(75, join.size());
+    EXPECT_EQ(8, join.get_attributes().size());
+
+    _nBuf = _old_nbuf;
+    _block_size = _old_block_size;
 }
 
 TEST(FullTest, FullTest) {
