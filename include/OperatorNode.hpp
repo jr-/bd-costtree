@@ -154,6 +154,18 @@ class LessExpression : public Expression, public FinalExpression {
 		int best_access_cost(const Table * table) const;
 };
 
+class JoinExpression {
+    public:
+        enum JoinExpressionOperator {Equal, NotEqual};
+        JoinExpression(const std::pair<string, string> left, const std::pair<string, string> right, const JoinExpressionOperator operator_type) : _left_at(left), _right_at(right), _operator_type(operator_type) {};
+        std::pair<string, string> left_at() const { return _left_at;};
+        std::pair<string, string> right_at() const { return _right_at;};
+        JoinExpressionOperator operator_type() const {return _operator_type;};
+    private:
+        const std::pair<string, string> _left_at, _right_at;
+        const JoinExpressionOperator _operator_type;
+};
+
 class SelectionNode : public Table {
 
 	public:
@@ -216,8 +228,8 @@ class ProductNode : public Table {
 class JoinNode : public Table {
 
 	public:
-        JoinNode(const Expression* expression);
-		JoinNode(Table* left, Table* right, const Expression* expression);
+        JoinNode(const JoinExpression* expression);
+		JoinNode(Table* left, Table* right, const JoinExpression* expression);
 		virtual ~JoinNode();
         void set_child_left(Table *left) {_left = left; update();};
         void set_child_right(Table *right) {_right = right; update();};
@@ -228,7 +240,7 @@ class JoinNode : public Table {
 
 	private:
 		Table *_left, *_right = nullptr; //children
-		const Expression* _expression;
+		const JoinExpression* _expression;
         int A1() const;
         int A2() const;
         int A3() const;
