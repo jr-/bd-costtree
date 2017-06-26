@@ -393,9 +393,9 @@ TEST(FullTest, FullTest) {
 
 	EqualExpression selectionLeftExpression(std::pair<string, string>("Consultas", "data"), std::pair<string, string>("", "15/10/2007"));
 	SelectionNode selection_left(&selectionLeftExpression);
-    selection_left.set_child(&consultas);
+	selection_left.set_child(&consultas);
 	ProjectionNode projection_left(deque<std::pair<string, string>>{std::pair<string, string>("Consultas", "codm")});
-    projection_left.set_child(&selection_left);
+	projection_left.set_child(&selection_left);
 
 
 	NotEqualExpression not_equal(pair<string, string>("Medicos", "cidade"), pair<string, string>("", "Florianopolis"));
