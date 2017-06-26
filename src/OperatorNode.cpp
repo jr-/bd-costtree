@@ -39,7 +39,7 @@ void Table::add_attribute(string attribute_name, type attribute_type, unsigned i
 	auto got = _attributes.find(attribute_name);
 	if(got != _attributes.end()) {
 		//attribute already exists, cant be inserted
-		throw std::runtime_error("Attribute " + attribute_name + " already exists in " + _name);
+		throw std::runtime_error("Table::add_attribute(): Attribute " + attribute_name + " already exists in " + _name);
 	}
 	auto attribute_characteristics = std::tuple<type, unsigned int, unsigned int>(attribute_type, size, variability);
 	auto to_add = std::pair<string, std::tuple<type, unsigned int, unsigned int>>(attribute_name, attribute_characteristics);
@@ -63,7 +63,7 @@ void Table::add_foreign_key(string attribute_name, string foreign_table_name)
 	//attribute_name must be an attribute in this table
 	if(_attributes.find(attribute_name) == _attributes.end()) {
 		//attribute_name is not an attribute of this table
-		throw std::runtime_error(attribute_name + " is not an attribute of " + _name);
+		throw std::runtime_error("Table::add_foreign_key(): " + attribute_name + " is not an attribute of " + _name);
 		return;
 	}
 	_foreign_keys.insert(std::pair<string, string>(attribute_name, foreign_table_name));
@@ -74,7 +74,7 @@ void Table::add_secondary_index(string attribute_name, unsigned int n, unsigned 
 	//attribute_name must be the name of an attribute of this table.
 	if(_attributes.find(attribute_name) == _attributes.end()) {
 		//attribute_name is not an attribute of this table
-		throw std::runtime_error(attribute_name + " is not an attribute of " + _name);
+		throw std::runtime_error("Table::add_secondary_index(): " + attribute_name + " is not an attribute of " + _name);
 		return;
 	}
 	auto values = std::pair<unsigned int, unsigned int>(n, fi);
@@ -86,7 +86,7 @@ void Table::add_primary_index(string attribute_name, unsigned int n, unsigned in
 	//attribute_name must be the name of an attribute of this table.
 	if(_attributes.find(attribute_name) == _attributes.end()) {
 		//attribute_name is not an attribute of this table
-		throw std::runtime_error(attribute_name + " is not an attribute of " + _name);
+		throw std::runtime_error("Table::add_primary_index(): " + attribute_name + " is not an attribute of " + _name);
 		return;
 	}
 	auto values = std::pair<unsigned int, unsigned int>(n, fi);
@@ -114,7 +114,7 @@ void Table::ordered_by(string attribute)
 	//attribute must be an attribute of this table
 	if(_attributes.find(attribute) == _attributes.end()) {
 		//attribute_name is not an attribute of this table
-		throw std::runtime_error(attribute + " is not an attribute of " + _name);
+		throw std::runtime_error("Table::ordered_by(): " + attribute + " is not an attribute of " + _name);
 		return;
 	}
 	_ordered_by = attribute;
@@ -510,7 +510,7 @@ int Table::size() const
 unsigned int Table::primary_index_access_cost(string attribute_name) const
 {
 	if(_primary_indexes.find(attribute_name) == _primary_indexes.end()) {
-		throw std::runtime_error("Attribute " + attribute_name + " does not have a primary index in " + _name);
+		throw std::runtime_error("Table::primary_index_access_cost(): Attribute " + attribute_name + " does not have a primary index in " + _name);
 	}
 	if(_primary_indexes.at(attribute_name) == pair<unsigned int, unsigned int>(0,1)) { //hash
 		return 1;
@@ -523,8 +523,8 @@ unsigned int Table::primary_index_access_cost(string attribute_name) const
 
 unsigned int Table::secondary_index_access_cost(string attribute_name) const
 {
-	if(_primary_indexes.find(attribute_name) == _primary_indexes.end()) {
-		throw std::runtime_error("Attribute " + attribute_name + " does not have a secondary index in " + _name);
+	if(_secondary_indexes.find(attribute_name) == _secondary_indexes.end()) {
+		throw std::runtime_error("Table::secondary_index_access_cost(): Attribute " + attribute_name + " does not have a secondary index in " + _name);
 	}
 	if(_secondary_indexes.at(attribute_name) == pair<unsigned int, unsigned int>(0,1)) { //hash
 		return 1;

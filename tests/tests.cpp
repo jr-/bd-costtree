@@ -540,7 +540,7 @@ TEST(JoinOperator, sizeat) {
 TEST(SelectionTest, SecondaryIndexTest) {
 	Table medicos("Medicos", 100);
 	medicos.add_attribute("cidade", STRING, 15, 50);
-	//medicos.add_secondary_index("cidade", 5, 5);
+	medicos.add_secondary_index("cidade", 5, 5);
 	medicos.add_primary_key(deque<string>{"cidade"});
 	NotEqualExpression not_equal(pair<string, string>("Medicos", "cidade"), pair<string, string>("", "Florianopolis"));
 	SelectionNode sel(&not_equal);
