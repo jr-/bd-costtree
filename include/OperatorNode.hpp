@@ -170,6 +170,7 @@ class SelectionNode : public Table {
 
 	public:
         SelectionNode(const Expression* expression);
+        SelectionNode(string attribute, string literal, int expressionType);
 		SelectionNode(Table* child, const Expression* expression);
 		virtual ~SelectionNode();
         void set_child(Table* child) {_child = child; update();};
