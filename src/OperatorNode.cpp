@@ -208,26 +208,70 @@ int LessExpression::best_access_cost(const Table * table) const
 {
 }
 
-NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("NaturalJoin" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
+NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("NaturalJoin" + left->name() + right->name(), 0), _left(left), _right(right)
 {
-    //TODO calcular tuple_quantity e adicionar atributos
-    //if atributos iguais concatena com o nome da esquerda
-    //juncao natural sem atributo em comum nr * ns
-    //juncao por referencia fk(R) = pk(S)
-    //juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
-    //juncao por igualdade (atributos nao chave)
+    //lista de atributos com o mesmo nome
     deque<string> j_attr;
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
-    bool l_ord, r_ord = false;
-    int result;
-    //pega os atributos com o mesmo nome para a juncao
-    for(auto &at : lat) {
-        got = rat.find(at.first);
+
+    //pega os atributos com o mesmo nome para a juncao && add right attributes sem pegar os duplicados
+    std::tuple<type, unsigned int, unsigned int> atf;
+    for(auto &at : rat) {
+        got = lat.find(at.first);
         if(got != lat.end()) {
             j_attr.push_back(at.first);
+        } else {
+            atf = at.second;
+            add_attribute(_right->name() + "." + at.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
         }
+    }
+
+    //add attributes com os duplicados
+    for(auto &a : lat){
+        atf = a.second;
+        add_attribute(_left->name() + "." + a.first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+    }
+    //calcular tuple_quantity
+    if(j_attr.size() != 0){
+        //considerando que so tem 1 atributo em comum
+        string c_at = j_attr.at(0);
+        //2 - juncao por referencia fk(R) = pk(S)
+        unordered_map<string, string> fks = _left->get_fks();
+        auto gotf = fks.find(c_at);
+        if(gotf != fks.end()) {
+            _tuple_quantity = _left->tuple_quantity();
+            std::cout << _tuple_quantity << std::endl;
+        }
+        fks = _right->get_fks();
+        gotf = fks.find(c_at);
+        if(gotf != fks.end()) {
+            _tuple_quantity = _right->tuple_quantity();
+        }
+
+        if(_tuple_quantity == 0) {
+            bool l_unique, r_unique = false;
+
+            double l_card = _left->attribute_cardinality(c_at);
+            double r_card = _right->attribute_cardinality(c_at);
+            if(l_card == 1.0){
+                l_unique = true;
+            }
+            if(r_card == 1.0){
+                r_unique = true;
+            }
+            //3 - juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
+            if(l_unique && r_unique)
+                _tuple_quantity = std::min<int>(_left->tuple_quantity(), _right->tuple_quantity());
+
+            if(_tuple_quantity == 0) {
+                //4 - juncao por igualdade (atributos nao chave)
+                _tuple_quantity = std::min<int>(_left->tuple_quantity()*l_card, _right->tuple_quantity()*r_card);
+            }
+        }
+    } else {//1 - juncao natural sem atributo em comum nr * ns
+        _tuple_quantity = _left->tuple_quantity() * _right->tuple_quantity();
     }
 }
 
@@ -438,17 +482,17 @@ int ProductNode::best_access_cost() const
 	return res;
 }
 
-ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), 0), _child(child), _attribs(attributes)
+ProjectionNode::ProjectionNode(const Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), child->tuple_quantity()), _child(child), _attribs(attributes)
 {
     //procura os atributos da projecao na tabela do filho e adiciona na tabela da projecao
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>> at = child->get_attributes();
     unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
     std::tuple<type, unsigned int, unsigned int> atf;
     for(auto &a : _attribs) {
-        got = at.find(a.first+a.second);
+        got = at.find(a.second);
         if ( got != at.end()) {
             atf = got->second;
-            add_attribute(got->first, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+            add_attribute(a.first + "." + a.second, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
         }
     }
 }
