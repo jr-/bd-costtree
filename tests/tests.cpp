@@ -34,6 +34,122 @@ TEST(ExpressionTest, ExpressionTest) {
 	EXPECT_EQ(100/2, gt.tuple_quantity(&tb));
 }
 
+TEST(ProjectionOperator, FullTest) {
+    int _old_block_size = _block_size;
+    _block_size = 1024;
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    ProjectionNode projection(&medicos, deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    EXPECT_EQ(5, projection.best_access_cost());
+    EXPECT_EQ(20, projection.size());
+    EXPECT_EQ(100, projection.tuple_quantity());
+    EXPECT_EQ(2, projection.block_quantity());
+}
+
+TEST(JoinOperator, BestAcessCostTest) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_attribute("codp", INT, 10, 450);
+    consultas.add_attribute("data", DATE, 10, 300);
+    consultas.add_attribute("hora", INT, 5, 15);
+
+    EXPECT_EQ(30, consultas.size());
+
+    consultas.add_secondary_index("codm", 5, 5);
+    consultas.add_secondary_index("codp", 5, 5);
+    consultas.add_secondary_index("data", 5, 5);
+    consultas.add_secondary_hash_index("codm");
+    consultas.add_secondary_hash_index("codp");
+
+    consultas.ordered_by("data");
+    consultas.add_foreign_key("codm", "Medicos");
+    consultas.add_foreign_key("codp", "Pacientes");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    medicos.add_primary_key(deque<string>{"codm"});
+    medicos.add_primary_index(10, 10);
+    medicos.add_secondary_hash_index("especialidade");
+    medicos.add_secondary_index("cidade", 5, 5);
+
+    medicos.ordered_by("codm");
+
+    EqualExpression eq = EqualExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"));
+
+    JoinNode join(&medicos, &consultas, &eq);
+
+    EXPECT_EQ(155, join.best_access_cost());//tempo do A1 fazer na mao pros outros
+	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+	EXPECT_EQ(75, join.size());
+
+
+}
+
+TEST(ProductOperator, FullTest) {
+    int _old_nbuf = _nBuf;
+    int _old_block_size = _block_size;
+    _nBuf = 5;
+    _block_size = 1024;
+
+    Table consultas("Consultas", 1000);
+    consultas.add_attribute("codm", INT, 5, 80);
+    consultas.add_attribute("codp", INT, 10, 450);
+    consultas.add_attribute("data", DATE, 10, 300);
+    consultas.add_attribute("hora", INT, 5, 15);
+
+    EXPECT_EQ(30, consultas.size());
+
+    consultas.add_secondary_index("codm", 5, 5);
+    consultas.add_secondary_index("codp", 5, 5);
+    consultas.add_secondary_index("data", 5, 5);
+    consultas.add_secondary_hash_index("codm");
+    consultas.add_secondary_hash_index("codp");
+
+    consultas.ordered_by("data");
+    consultas.add_foreign_key("codm", "Medicos");
+    consultas.add_foreign_key("codp", "Pacientes");
+
+    Table medicos("Medicos", 100);
+    medicos.add_attribute("codm", INT, 5, 100);
+    medicos.add_attribute("nome", STRING, 15, 100);
+    medicos.add_attribute("cidade", STRING, 15, 50);
+    medicos.add_attribute("idade", INT, 5, 40);
+    medicos.add_attribute("especialidade", STRING, 10, 10);
+    EXPECT_EQ(50, medicos.size());
+
+    medicos.add_primary_key(deque<string>{"codm"});
+    medicos.add_primary_index(10, 10);
+    medicos.add_secondary_hash_index("especialidade");
+    medicos.add_secondary_index("cidade", 5, 5);
+
+    medicos.ordered_by("codm");
+
+    ProductNode product(&medicos, &consultas);
+
+    EXPECT_EQ(155, product.best_access_cost());
+	EXPECT_EQ(100000, product.tuple_quantity());
+	EXPECT_EQ(80, product.size());
+    EXPECT_EQ(8334, product.block_quantity());
+}
+
 TEST(FullTest, FullTest) {
 	int _old_nbuf = _nBuf;
 	int _old_block_size = _block_size;

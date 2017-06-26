@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 using std::string;
 using std::deque;
@@ -168,9 +169,27 @@ LessExpression::LessExpression(const std::pair<string, string> left, const std::
 int LessExpression::tuple_quantity(const Table* table) const {}
 double LessExpression::cardinality(const Table* table) const {}
 
-NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
+NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("NaturalJoin" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
 {
-
+    //TODO calcular tuple_quantity e adicionar atributos
+    //if atributos iguais concatena com o nome da esquerda
+    //juncao natural sem atributo em comum nr * ns
+    //juncao por referencia fk(R) = pk(S)
+    //juncao entre chaves candidatas (atributos unique) ie cpf nas duas tabelas
+    //juncao por igualdade (atributos nao chave)
+    deque<string> j_attr;
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> lat = _left->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>> rat = _right->get_attributes();
+    unordered_map<string, std::tuple<type, unsigned int, unsigned int>>::const_iterator got;
+    bool l_ord, r_ord = false;
+    int result;
+    //pega os atributos com o mesmo nome para a juncao
+    for(auto &at : lat) {
+        got = rat.find(at.first);
+        if(got != lat.end()) {
+            j_attr.push_back(at.first);
+        }
+    }
 }
 
 NaturalJoinNode::~NaturalJoinNode(){}
@@ -393,6 +412,60 @@ ProjectionNode::~ProjectionNode(){}
 int ProjectionNode::best_access_cost() const
 {
     return _child->block_quantity();
+}
+
+JoinNode::JoinNode(const Table* left, const Table* right, const Expression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
+{
+
+}
+
+JoinNode::~JoinNode(){}
+
+int JoinNode::best_access_cost() const
+{
+	//we need to log all these results
+	int res = A1();
+	string best = "A1";
+	int a2 = A2();
+	if(a2 != 0 && a2 < res) {
+		res = a2;
+		best = "A2";
+	}
+	int a3 = A3();
+	if(a3 != 0 && a3 < res) {
+		res = a3;
+		best = "A3";
+	}
+
+	int a4 = A4();
+	if(a4 != 0 && a4 < res) {
+		res = a4;
+		best = "A4";
+	}
+	return res;
+}
+
+int JoinNode::A1() const
+{
+	//is always possible
+	int mult = _left->block_quantity() * _right->block_quantity();
+	int res = std::min<int>(_left->block_quantity() + mult, _right->block_quantity() + mult);
+	return res;
+}
+
+int JoinNode::A2() const
+{
+    return 0;
+}
+
+int JoinNode::A3() const
+{
+    return 0;
+}
+
+int JoinNode::A4() const
+{
+    return 0;
 }
 
 

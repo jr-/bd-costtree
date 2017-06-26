@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <tuple>
 #include <math.h>
+#include <iostream>
 
 using std::string;
 using std::deque;
@@ -40,7 +41,8 @@ class Table {
 
 		string name() const {return _name;};
 		int tuple_quantity() const {return _tuple_quantity;};
-		int block_quantity() const {return ceil(_tuple_quantity / block_factor());};
+		int block_quantity() const {return ceil((double)_tuple_quantity / (double)block_factor());};
+
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
 		bool has_primary_index() const {return _primary_index != std::pair<unsigned int, unsigned int>(0,0);};
@@ -205,7 +207,10 @@ class JoinNode : public Table {
 	private:
 		const Table *_left, *_right; //children
 		const Expression* _expression;
-
+        int A1() const;
+        int A2() const;
+        int A3() const;
+        int A4() const;
 };
 
 class NaturalJoinNode : public Table {
