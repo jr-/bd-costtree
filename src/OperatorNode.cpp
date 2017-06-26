@@ -7,6 +7,7 @@
 using std::string;
 using std::deque;
 using std::unordered_map;
+using std::pair;
 
 /*class Expression {};
 class AndExpression : public Expression {};
@@ -18,8 +19,7 @@ class LessExpression : public Expression {};*/
 
 Table::Table(string name, unsigned int tuple_quantity) :
 	_name(name),
-	_tuple_quantity(tuple_quantity),
-	_primary_index(std::pair<unsigned int, unsigned int>(0, 0))
+	_tuple_quantity(tuple_quantity)
 	{}
 Table::~Table(){}
 
@@ -79,9 +79,23 @@ void Table::add_secondary_index(string attribute_name, unsigned int n, unsigned 
 	_secondary_indexes.insert(std::pair<string, std::pair<unsigned int, unsigned int>>(attribute_name, values));
 }
 
-void Table::add_primary_index(unsigned int n, unsigned int fi)
+void Table::add_primary_index(string attribute_name, unsigned int n, unsigned int fi)
 {
-	_primary_index = std::pair<unsigned int, unsigned int>(n, fi);
+	//attribute_name must be the name of an attribute of this table.
+	if(_attributes.find(attribute_name) == _attributes.end()) {
+		//attribute_name is not an attribute of this table
+		return;
+	}
+	auto values = std::pair<unsigned int, unsigned int>(n, fi);
+	_primary_indexes.insert(std::pair<string, std::pair<unsigned int, unsigned int>>(attribute_name, values));
+}
+
+pair<unsigned int, unsigned int> Table::primary_index(string attribute_name) const
+{
+	if(_primary_indexes.find(attribute_name) == _primary_indexes.end()) {
+		return pair<unsigned int, unsigned int>(0, 0);
+	}
+	return _primary_indexes.at(attribute_name);
 }
 
 void Table::ordered_by(string attribute)
@@ -102,55 +116,74 @@ AndExpression::AndExpression(const Expression* left, const Expression* right) : 
 int AndExpression::tuple_quantity(const Table* table) const
 {
 	int nr = table->tuple_quantity();
-	double cardinalitites = _left->cardinality(table) * _right->cardinality(table);
+	double cardinalitites = _left->tuple_quantity(table) * _right->tuple_quantity(table);
 	return cardinalitites / nr;
 }
 
-double AndExpression::cardinality(const Table* table) const
+int AndExpression::best_access_cost(const Table * table) const
 {
-	double cardinalitites = _left->cardinality(table) * _right->cardinality(table);
-	return cardinalitites / table->tuple_quantity();
+	return std::min(_left->best_access_cost(table), _right->best_access_cost(table));
 }
 
 OrExpression::OrExpression(const Expression* left, const Expression* right) : _left(left), _right(right) {}
 
-int OrExpression::tuple_quantity(const Table* table) const {}
-double OrExpression::cardinality(const Table* table) const {}
+int OrExpression::tuple_quantity(const Table* table) const
+{
+}
+
+int OrExpression::best_access_cost(const Table * table) const
+{
+	return _left->best_access_cost(table) + _right->best_access_cost(table);
+}
 
 EqualExpression::EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right):  _left_attribute(left), _right_attribute(right) {}
 
 int EqualExpression::tuple_quantity(const Table* table) const
 {
-	return this->cardinality(table);
+	int quantity;
+	if(_left_attribute.first == "") {
+		quantity = table->attribute_cardinality(_right_attribute.second);
+	} else {
+		quantity = table->attribute_cardinality(_left_attribute.second);
+	}
+	return quantity;
 }
 
-double EqualExpression::cardinality(const Table* table) const
+int EqualExpression::best_access_cost(const Table * table) const
 {
-	double cardinality;
-	if(_left_attribute.first == "") {
-		cardinality = table->attribute_cardinality(_right_attribute.second);
-	} else {
-		cardinality = table->attribute_cardinality(_left_attribute.second);
+	deque<pair<int, string>> results;
+	pair<int, string> a1 = pair<int, string>(table->block_quantity(), "A1");
+	results.push_back(a1);
+	string attribute = _left_attribute.second;
+	if(_right_attribute.first != "") {
+		attribute = _right_attribute.second;
 	}
-	return cardinality;
+	if(attribute == table->ordered_by()) { //A2
+		int calc_a2 = ceil(log2(table->block_quantity()));
+		if(deque<string>{attribute} != table->primary_key()) {
+			calc_a2 += ceil(table->attribute_cardinality(attribute)/table->block_factor()) - 1;
+		}
+		auto a2 = pair<int, string>(calc_a2, "A2");
+		results.push_back(a2);
+	}
+	//A3 e A4
 }
 
 NotEqualExpression::NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
 
 int NotEqualExpression::tuple_quantity(const Table* table) const
 {
-	return table->tuple_quantity() - this->cardinality(table) * table->tuple_quantity();
+	int quantity;
+	if(_left_attribute.first == "") {
+		quantity = table->attribute_cardinality(_right_attribute.second);
+	} else {
+		quantity = table->attribute_cardinality(_left_attribute.second);
+	}
+	return table->tuple_quantity() - quantity * table->tuple_quantity();
 }
 
-double NotEqualExpression::cardinality(const Table* table) const
+int NotEqualExpression::best_access_cost(const Table * table) const
 {
-	double cardinality;
-	if(_left_attribute.first == "") {
-		cardinality = table->attribute_cardinality(_right_attribute.second);
-	} else {
-		cardinality = table->attribute_cardinality(_left_attribute.second);
-	}
-	return cardinality;
 }
 
 GreaterExpression::GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
@@ -160,14 +193,20 @@ int GreaterExpression::tuple_quantity(const Table* table) const
 	return table->tuple_quantity() / 2;
 }
 
-double GreaterExpression::cardinality(const Table* table) const
+int GreaterExpression::best_access_cost(const Table * table) const
+{
+}
+
+LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
+
+int LessExpression::tuple_quantity(const Table* table) const
 {
 	return table->tuple_quantity() / 2;
 }
 
-LessExpression::LessExpression(const std::pair<string, string> left, const std::pair<string, string> right) : _left_attribute(left), _right_attribute(right) {}
-int LessExpression::tuple_quantity(const Table* table) const {}
-double LessExpression::cardinality(const Table* table) const {}
+int LessExpression::best_access_cost(const Table * table) const
+{
+}
 
 NaturalJoinNode::NaturalJoinNode(const Table* left, const Table* right) : Table("NaturalJoin" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right)
 {
@@ -230,7 +269,7 @@ int NaturalJoinNode::A1() const
 int NaturalJoinNode::A2() const
 {
 	//when a2 cant be calculated, return 0
-	if(!_left->has_primary_index() && !_right->has_primary_index()){
+	/*if(!_left->has_primary_index() && !_right->has_primary_index()){
 		return 0;
 	}
 	const Table* indexed, *no_index;
@@ -243,7 +282,8 @@ int NaturalJoinNode::A2() const
 	}
 	int res = no_index->block_quantity();
 	res += no_index->tuple_quantity() * indexed->primary_index_access_cost();
-	return res;
+	return res;*/
+	return 0;
 }
 //Se R e S estiverem fisicamente ordenadas pelos atributos de juncao
 //Ideia Geral: pega os atributos em comum e verifica se as duas tabelas estão ordenadas fisicamentes pelos atributos em comum
@@ -265,9 +305,9 @@ int NaturalJoinNode::A3() const
     //verifica se as tabelas estão ordenadas por estes atributos
     //oq fazer no caso de ter 2 atributos em comum?
     for(auto &ja : j_attr) {
-        if( ja == _left->get_ordered_by())
+        if( ja == _left->ordered_by())
             l_ord = true;
-        if( ja == _right->get_ordered_by())
+        if( ja == _right->ordered_by())
             r_ord = true;
     }
     //custoMJ
@@ -303,16 +343,21 @@ int Table::size() const
 // indice primario arvore-B para atributo nao-chave(caso a4 da seleção) = hIs + teto(Cs(ai)/fs)
 // indice secundario arvore-B para atributo nao-chave(caso a6 seleção) = HIs + 1 + teto(Cs(ai))
 // indice hash = 1?
-unsigned int Table::primary_index_access_cost() const
+unsigned int Table::primary_index_access_cost(string attribute_name) const
 {
 
 	return 0; //TODO
 }
 
-SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection" + child->name(), 0/*Should be the estimation from the expression*/), _child(child), _expression(expr)
+SelectionNode::SelectionNode(const Table* child, const Expression* expr) : Table("Selection(" + child->name() + ")", 0), _child(child), _expression(expr)
 {}
 
 SelectionNode::~SelectionNode(){}
+
+int SelectionNode::tuple_quantity() const
+{
+	return _expression->tuple_quantity(this);
+}
 
 int SelectionNode::best_access_cost() const
 {

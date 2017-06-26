@@ -11,6 +11,7 @@
 using std::string;
 using std::deque;
 using std::unordered_map;
+using std::pair;
 
 enum type {
 	STRING, INT, DATE
@@ -36,23 +37,25 @@ class Table {
 		void add_secondary_index(string attribute_name, unsigned int n, unsigned int fi);
 		void add_secondary_hash_index(string attribute_name)
 			{_secondary_indexes. insert(std::pair<string, std::pair<unsigned int, unsigned int>>(attribute_name, std::pair<unsigned int, unsigned int>(0 ,1)));}
-		void add_primary_index(unsigned int n, unsigned int fi);
+		void add_primary_index(string attribute_name, unsigned int n, unsigned int fi);
 		void ordered_by(string attribute);
 
 		string name() const {return _name;};
+
 		int tuple_quantity() const {return _tuple_quantity;};
 		int block_quantity() const {return ceil((double)_tuple_quantity / (double)block_factor());};
 
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
-		bool has_primary_index() const {return _primary_index != std::pair<unsigned int, unsigned int>(0,0);};
-		unsigned int primary_index_access_cost() const;
+		pair<unsigned int, unsigned int> primary_index(string attribute_name) const;
+		unsigned int primary_index_access_cost(string attribute_name) const;
 		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
+		deque<string> primary_key() const {return _primary_key;};
         unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
-        string get_ordered_by() const {return _ordered_by;};
+        string ordered_by() const {return _ordered_by;};
         virtual int total_access_cost() const { return 0;};
 
-	private:
+	protected:
 		string _name;
 		//attribute name indexes type, size in bytes and variability
 		unordered_map<string, std::tuple<type, unsigned int, unsigned int>> _attributes;
@@ -63,7 +66,7 @@ class Table {
 		//foreign keys. attribute name indexes table name
 		unordered_map<string, string> _foreign_keys;
 		//Does this table have a primary index? What is its N and Fi? If not, <0,0>. <0,1> indicate a hash index
-		std::pair<unsigned int, unsigned int> _primary_index;
+		unordered_map<string, std::pair<unsigned int, unsigned int>> _primary_indexes;
 		//secondary index<name, N, Fi>
 		unordered_map<string, std::pair<unsigned int, unsigned int>> _secondary_indexes;
 		//are the tuples ordered in disk by an attribute? If not, empty string
@@ -75,8 +78,8 @@ class Expression {
 	public:
 		Expression();
 		virtual ~Expression();
-		virtual int tuple_quantity(const Table* table) const = 0;
-		virtual double cardinality(const Table* table) const = 0;
+		virtual int tuple_quantity(const Table * table) const = 0;
+		virtual int best_access_cost(const Table * table) const = 0;
 };
 
 class AndExpression : public Expression {
@@ -84,7 +87,7 @@ class AndExpression : public Expression {
 		AndExpression(const Expression* left, const Expression* right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		const Expression *_left, *_right;
 };
@@ -94,7 +97,7 @@ class OrExpression : public Expression {
 		OrExpression(const Expression* left, const Expression* right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		const Expression *_left, *_right;
 };
@@ -104,7 +107,7 @@ class EqualExpression: public Expression {
 		EqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		//contains <Table_name, attribute_name>
 		//or just <"", value> for literals
@@ -116,7 +119,7 @@ class NotEqualExpression : public Expression {
 		NotEqualExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		//contains <Table_name, attribute_name>
 		//or just <"", value> for literals
@@ -128,7 +131,7 @@ class GreaterExpression : public Expression {
 		GreaterExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		//contains <Table_name, attribute_name>
 		//or just <"", value> for literals
@@ -140,7 +143,7 @@ class LessExpression : public Expression {
 		LessExpression(const std::pair<string, string> left, const std::pair<string, string> right);
 
 		int tuple_quantity(const Table * table) const;
-		double cardinality(const Table* table) const;
+		int best_access_cost(const Table * table) const;
 	private:
 		//contains <Table_name, attribute_name>
 		//or just <"", value> for literals

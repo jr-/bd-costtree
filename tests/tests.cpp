@@ -19,9 +19,11 @@ TEST(TrableTest, TableTest) {
 	EXPECT_EQ(100/50, tb.attribute_cardinality("nome"));
 	tb.add_attribute("idade", INT, 2, 20);
 	EXPECT_EQ(22, tb.size());
-	EXPECT_FALSE(tb.has_primary_index());
-	tb.add_primary_index(5, 20);
-	EXPECT_TRUE(tb.has_primary_index());
+	auto empty = pair<unsigned int, unsigned int>(0,0);
+	EXPECT_EQ(empty, tb.primary_index("nome"));
+	tb.add_primary_index("nome", 5, 20);
+	auto not_empty = pair<unsigned int, unsigned int>(5, 20);
+	EXPECT_EQ(not_empty, tb.primary_index("nome"));
 }
 
 TEST(ExpressionTest, ExpressionTest) {
@@ -183,7 +185,7 @@ TEST(FullTest, FullTest) {
 	EXPECT_EQ(50, medicos.size());
 
 	medicos.add_primary_key(deque<string>{"codm"});
-	medicos.add_primary_index(10, 10);
+	medicos.add_primary_index("codm", 10, 10);
 	medicos.add_secondary_hash_index("especialidade");
 	medicos.add_secondary_index("cidade", 5, 5);
 
