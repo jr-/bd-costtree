@@ -62,7 +62,8 @@ TEST(ProjectionOperator, FullTest) {
     medicos.add_attribute("especialidade", STRING, 10, 10);
     EXPECT_EQ(50, medicos.size());
 
-    ProjectionNode projection(deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    //ProjectionNode projection(deque<pair<string, string>>{pair<string, string>("Medicos", "codm"), pair<string, string>("Medicos", "nome")});
+    ProjectionNode projection("Medicos.codm, Medicos.nome");
     projection.set_child(&medicos);
 
     EXPECT_EQ(5, projection.best_access_cost());
@@ -311,13 +312,14 @@ TEST(JoinOperator, tqref) {
     Table medicos("Medicos", 100);
     medicos.add_attribute("codm", INT, 5, 100);
 
-    JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
+    //JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
 
-    JoinNode join(&eq);
-    join.set_child_left(&medicos);
-    join.set_child_right(&consultas);
-
-	EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
+    //JoinNode join(&eq);
+    JoinNode join("Medicos.codm = Consultas.codm");
+    // join.set_child_left(&medicos);
+    // join.set_child_right(&consultas);
+    //
+	// EXPECT_EQ(1000, join.tuple_quantity()); //juncao por referencia = tuplas da tabela que contem a chave estrangeira
 }
 
 TEST(JoinOperator, tqunique) {
@@ -335,6 +337,7 @@ TEST(JoinOperator, tqunique) {
     JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
 
     JoinNode join(&eq);
+    //JoinNode join("Medicos.codm = Consultas.codm");
     join.set_child_left(&medicos);
     join.set_child_right(&consultas);
 
@@ -356,6 +359,7 @@ TEST(JoinOperator, tqeqnunique) {
     JoinExpression eq = JoinExpression(std::pair<string, string>("Medicos", "codm"), std::pair<string, string>("Consultas", "codm"), JoinExpression::JoinExpressionOperator::Equal);
 
     JoinNode join(&eq);
+    //JoinNode join("Medicos.codm = Consultas.codm");
     join.set_child_left(&medicos);
     join.set_child_right(&consultas);
 

@@ -611,6 +611,35 @@ int ProductNode::best_access_cost() const
 	return res;
 }
 
+ProjectionNode::ProjectionNode(string expression2p) : Table()
+{
+    deque<string> at2dp;
+    size_t pos = 0;
+    string token;
+    while(expression2p.size() > 0) {
+        pos = expression2p.find(", ");
+        if(pos != string::npos) {
+            token = expression2p.substr(0, pos);
+            at2dp.push_back(token);
+            expression2p.erase(0, pos+2);
+        } else {
+            token = expression2p;
+            at2dp.push_back(token);
+            expression2p = "";
+        }
+    }
+    for(auto &t : at2dp){
+        pair<string, string> ia;
+        size_t found;
+        found = t.find(".");
+        if(found !=string::npos) {
+            ia.first = t.substr(0, found);
+            ia.second = t.substr(found+1, t.size());
+        }
+        _attribs.push_back(ia);
+    }
+}
+
 ProjectionNode::ProjectionNode(deque<std::pair<string, string>> attributes) : Table(), _attribs(attributes) {}
 
 ProjectionNode::ProjectionNode(Table* child, deque<std::pair<string, string>> attributes) : Table("Projection" + child->name(), child->tuple_quantity()), _child(child), _attribs(attributes)
@@ -643,9 +672,64 @@ int ProjectionNode::best_access_cost() const
     return _child->block_quantity();
 }
 
-JoinNode::JoinNode(const JoinExpression* expression) : Table(), _expression(expression) {}
+JoinNode::JoinNode(string expression2p) : Table()
+{
+    string jexpression = expression2p;
+    size_t found = string::npos;
+    int itd = 0;
 
-JoinNode::JoinNode(Table* left, Table* right, const JoinExpression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
+    string token1, token2, token3;
+
+    //determ token2 e pos
+    deque<string> symbols;
+    symbols.push_back("<=");
+    symbols.push_back(">=");
+    symbols.push_back("!=");
+    symbols.push_back(">");
+    symbols.push_back("<");
+    symbols.push_back("=");
+
+    while(found == string::npos && itd < symbols.size()) {
+        found = jexpression.find(symbols.at(itd));
+        if(found != string::npos) {
+            token2 = symbols.at(itd);
+            break;
+        }
+        itd++;
+    }
+
+    if(found !=string::npos) {
+        token1 = jexpression.substr(0, found);
+        token3 = jexpression.substr(found+token2.size()+1, jexpression.size());
+    }
+
+    pair<string, string> tk1, tk3;
+    found = string::npos;
+    found = token1.find(".");
+    if(found !=string::npos) {
+        tk1.first = token1.substr(0, found);
+        tk1.second = token1.substr(found+1, token1.size());
+    }
+    found = string::npos;
+    found = token3.find(".");
+    if(found !=string::npos) {
+        tk3.first = token3.substr(0, found);
+        tk3.second = token3.substr(found+1, token3.size());
+    }
+
+    JoinExpression::JoinExpressionOperator opera;
+    if(token2 == "=") {
+        opera = JoinExpression::JoinExpressionOperator::Equal;
+    } else {
+        opera = JoinExpression::JoinExpressionOperator::NotEqual;
+    }
+    JoinExpression expressionj = JoinExpression(tk1, tk3, opera);
+    _expression = &expressionj;
+}
+
+JoinNode::JoinNode(JoinExpression* expression) : Table(), _expression(expression) {}
+
+JoinNode::JoinNode(Table* left, Table* right, JoinExpression* expression) : Table("Join" + left->name() + right->name(), left->tuple_quantity() * right->tuple_quantity()), _left(left), _right(right), _expression(expression)
 {
 
 }
@@ -764,7 +848,7 @@ int JoinNode::A3() const
 {
     std::pair<string, string> left_at_name = _expression->left_at();
     std::pair<string, string> right_at_name = _expression->right_at();
-    JoinExpression::JoinExpressionOperator operator_type = _expression->operator_type();
+
     bool l_ord, r_ord = false;
     int result = 0;
     if( left_at_name.second == _left->ordered_by())
