@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-Wall -std=c++11
-DEBUGFLAGS=-g -Og
+DEBUGFLAGS=-g -O0
 
 TEST_LIB=-lgtest
 

@@ -26,6 +26,12 @@ unsigned int Table::best_access_cost() const
     return 0;
 }
 
+
+int Table::tuple_quantity() const
+{
+	return _tuple_quantity;
+}
+
 void Table::add_attribute(string attribute_name, type attribute_type, unsigned int size, unsigned int variability)
 {
 	//name must be unique
@@ -131,6 +137,8 @@ OrExpression::OrExpression(const Expression* left, const Expression* right) : _l
 
 int OrExpression::tuple_quantity(const Table* table) const
 {
+	int result = ceil(table->tuple_quantity() * (1 - (1 - _left->tuple_quantity(table)) * (1 - _right->tuple_quantity(table))));
+	return result;
 }
 
 int OrExpression::best_access_cost(const Table * table) const
@@ -272,6 +280,33 @@ int LessExpression::tuple_quantity(const Table* table) const
 
 int LessExpression::best_access_cost(const Table * table) const
 {
+	deque<pair<int, string>> results;
+	pair<int, string> a1 = pair<int, string>(table->block_quantity(), "A1");
+	results.push_back(a1);
+	string attribute = _left_attribute.second;
+	if(attribute == table->ordered_by()) { //A2
+		int calc_a2 = ceil(log2(table->block_quantity()));
+		if(deque<string>{attribute} != table->primary_key()) {
+			calc_a2 += ceil(table->attribute_cardinality(attribute)/table->block_factor()) - 1;
+		}
+		calc_a2 += ceil(((double) table->block_quantity()) / 2);
+		auto a2 = pair<int, string>(calc_a2, "A2");
+		results.push_back(a2);
+	}
+	if(table->primary_index(attribute) != pair<unsigned int, unsigned int>(0,0)) {//A8
+		int calc_a8 = ceil(((double) table->block_quantity()) / 2);
+		auto a8 = pair<int, string>(calc_a8, "A8");
+		results.push_back(a8);
+	}
+
+	auto best = results.back();
+	results.pop_back();
+	for(auto i: results) {
+		if(i.first < best.first) {
+			best = i;
+		}
+	}
+	return best.first;
 }
 
 NaturalJoinNode::NaturalJoinNode() : Table() {}
@@ -470,13 +505,24 @@ int Table::size() const
 // indice hash = 1?
 unsigned int Table::primary_index_access_cost(string attribute_name) const
 {
-
-	return 0; //TODO
+	if(_primary_indexes.at(attribute_name) == pair<unsigned int, unsigned int>(0,1)) { //hash
+		return 1;
+	}
+	auto index = _primary_indexes.at(attribute_name);
+	//variability * N
+	int inside = ceil(std::get<2>(_attributes.at(attribute_name)) / (double) index.first);
+	return ceil(log(inside) / log(index.second)); // log base=fi
 }
 
 unsigned int Table::secondary_index_access_cost(string attribute_name) const
 {
-	return 0; //TODO
+	if(_secondary_indexes.at(attribute_name) == pair<unsigned int, unsigned int>(0,1)) { //hash
+		return 1;
+	}
+	auto index = _secondary_indexes.at(attribute_name);
+	//variability * N
+	int inside = ceil(std::get<2>(_attributes.at(attribute_name)) / (double) index.first);
+	return ceil(log(inside) / log(index.second)); // log base=fi
 }
 
 SelectionNode::SelectionNode(const Expression* expr) : Table(), _expression(expr) {}
@@ -500,37 +546,7 @@ int SelectionNode::tuple_quantity() const
 
 int SelectionNode::best_access_cost() const
 {
-	int bR;
-
-	int res = A1();
-	string best = "A1";
-
-	bR = res;
-
-	// int a2 = A2(bR);
-	// if(a2 != 0 && a2 < res) {
-	// 	res = a2;
-	// 	best = "A2";
-	// }
-	return 0;
-}
-
-/*
- * A1 = bR = Pesquisa linear
- * fR = piso[tbloco/tR] fator de bloco table
- * bR = teto[nR/fR] = Numero de blocos table
- * tbloco = tamanho do bloco BD
- * tR = tamanho da tupla table
- * nR = numero tuplas table
- *
- * @return bR
-*/
-int SelectionNode::A1() const
-{
-	int fR = _block_size / _child->size();
-	int bR = ceil(float(_child->tuple_quantity() / fR));
-
-	return bR;
+	return _expression->best_access_cost(this);
 }
 
 ProductNode::ProductNode() : Table() {}
