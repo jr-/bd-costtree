@@ -353,6 +353,7 @@ void NaturalJoinNode::update(){
         if(j_attr.size() != 0){
             //considerando que so tem 1 atributo em comum
             string c_at = j_attr.at(0);
+
             //2 - juncao por referencia fk(R) = pk(S)
             unordered_map<string, string> fks = _left->get_fks();
             auto gotf = fks.find(c_at);
@@ -671,9 +672,11 @@ void ProjectionNode::update()
             got = at.find(a.second);
             if ( got != at.end()) {
                 atf = got->second;
-                add_attribute(a.first + "." + a.second, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
+                add_attribute(a.second, std::get<0>(atf), std::get<1>(atf), std::get<2>(atf));
             }
         }
+        _primary_key = _child->primary_key();
+        _foreign_keys = _child->get_fks();
     }
 }
 

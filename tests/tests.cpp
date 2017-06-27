@@ -628,7 +628,7 @@ TEST(FullTest, FullTest) {
 
 	EXPECT_EQ(2, natural_join.best_access_cost());
 	EXPECT_EQ(4, natural_join.tuple_quantity());
-	EXPECT_EQ(80, natural_join.size());
+	EXPECT_EQ(20, natural_join.size());
 
 	_nBuf = _old_nbuf;
 	_block_size = _old_block_size;
