@@ -392,6 +392,11 @@ void NaturalJoinNode::update(){
     }
 }
 
+int NaturalJoinNode::tuple_quantity() const
+{
+	return _tuple_quantity;
+}
+
 int NaturalJoinNode::best_access_cost() const
 {
 	//we need to log all these results
@@ -478,11 +483,11 @@ int NaturalJoinNode::A3() const
     result = _left->block_quantity() + _right->block_quantity();
     // custo das ordenacoes
     if(!l_ord) {
-        double itres = (log(_left->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = log(_left->block_quantity()/ (double)_nBuf) / log(_nBuf);
         result += 2 * _left->block_quantity() * (itres + 1);
     }
     if(!r_ord) {
-        double itres = (log(_right->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = log(_right->block_quantity()/(double) _nBuf) / log(_nBuf);
         result += 2 * _right->block_quantity() * (itres + 1);
     }
     return result;
@@ -854,7 +859,7 @@ int JoinNode::A3() const
     std::pair<string, string> left_at_name = _expression->left_at();
     std::pair<string, string> right_at_name = _expression->right_at();
 
-    bool l_ord, r_ord = false;
+    bool l_ord = false, r_ord = false;
     int result = 0;
     if( left_at_name.second == _left->ordered_by())
         l_ord = true;
@@ -864,11 +869,11 @@ int JoinNode::A3() const
     result = _left->block_quantity() + _right->block_quantity();
     // custo das ordenacoes
     if(!l_ord) {
-        double itres = (log(_left->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = log(_left->block_quantity()/(double) _nBuf) / log(_nBuf);
         result += 2 * _left->block_quantity() * (itres + 1);
     }
     if(!r_ord) {
-        double itres = (log(_right->block_quantity()/ _nBuf) / log(_nBuf));
+        double itres = log(_right->block_quantity()/(double) _nBuf) / log(_nBuf);
         result += 2 * _right->block_quantity() * (itres + 1);
     }
     return result;

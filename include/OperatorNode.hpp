@@ -258,6 +258,7 @@ class NaturalJoinNode : public Table {
         void set_child_left(Table *left) {_left = left; update();};
         void set_child_right(Table *right) {_right = right; update();};
 
+		int tuple_quantity() const;
 		int best_access_cost() const;
         int total_access_cost() const {return _left->total_access_cost() + _right->total_access_cost() + best_access_cost();};
         void update();
