@@ -543,14 +543,14 @@ TEST(JoinOperator, sizeat) {
 
 TEST(SelectionTest, SecondaryIndexTest) {
 	Table medicos("Medicos", 100);
-	medicos.add_attribute("cidade", STRING, 15, 50);
+	medicos.add_attribute("cidade", STRING, 50, 50);
 	medicos.add_secondary_index("cidade", 5, 5);
 	medicos.add_primary_key(deque<string>{"cidade"});
 	NotEqualExpression not_equal(pair<string, string>("Medicos", "cidade"), pair<string, string>("", "Florianopolis"));
 	SelectionNode sel(&not_equal);
 	sel.set_child(&medicos);
-	EXPECT_EQ(5, sel.best_access_cost()); //A1
-	EXPECT_EQ(10, sel.tuple_quantity());
+	EXPECT_EQ(3, sel.best_access_cost()); //A6
+	EXPECT_EQ(98, sel.tuple_quantity());
 }
 
 TEST(FullTest, FullTest) {
@@ -570,13 +570,14 @@ TEST(FullTest, FullTest) {
 	consultas.add_secondary_index("codm", 5, 5);
 	consultas.add_secondary_index("codp", 5, 5);
 	consultas.add_secondary_index("data", 5, 5);
+	consultas.add_primary_index("data", 5, 5);
 	consultas.add_secondary_hash_index("codm");
 	consultas.add_secondary_hash_index("codp");
 
 	consultas.ordered_by("data");
 	consultas.add_foreign_key("codm", "Medicos");
 	consultas.add_foreign_key("codp", "Pacientes");
-	//Pacientes will not be used in this example, but will put this for completion sake
+	//Pacientes will not be used in this example, but will be put for completion sake
 	Table medicos("Medicos", 100);
 	medicos.add_attribute("codm", INT, 5, 100);
 	medicos.add_attribute("nome", STRING, 15, 100);
@@ -613,17 +614,17 @@ TEST(FullTest, FullTest) {
 
 	EXPECT_EQ(5, selection_right.best_access_cost()); //A1
 	EXPECT_EQ(10, selection_right.tuple_quantity());
-	EXPECT_EQ(500, selection_right.size());
+	EXPECT_EQ(500, selection_right.total_table_size());
 
 	EXPECT_EQ(1, projection_right.best_access_cost());
-	EXPECT_EQ(200, projection_right.size());
+	EXPECT_EQ(200, projection_right.total_table_size());
 
 	EXPECT_EQ(4, selection_left.best_access_cost()); //A4
 	EXPECT_EQ(4, selection_left.tuple_quantity());
-	EXPECT_EQ(120, selection_left.size());
+	EXPECT_EQ(120, selection_left.total_table_size());
 
 	EXPECT_EQ(1, projection_left.best_access_cost());
-	EXPECT_EQ(40, projection_left.size());
+	EXPECT_EQ(20, projection_left.total_table_size());
 
 	EXPECT_EQ(2, natural_join.best_access_cost());
 	EXPECT_EQ(4, natural_join.tuple_quantity());

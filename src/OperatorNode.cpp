@@ -128,8 +128,8 @@ AndExpression::AndExpression(const Expression* left, const Expression* right) : 
 int AndExpression::tuple_quantity(const Table* table) const
 {
 	int nr = table->tuple_quantity();
-	double cardinalitites = _left->tuple_quantity(table) * _right->tuple_quantity(table);
-	return cardinalitites / nr;
+	double cardinalitites = (_left->tuple_quantity(table) / (double) nr) *( _right->tuple_quantity(table) / (double)nr);
+	return ceil(cardinalitites * nr);
 }
 
 int AndExpression::best_access_cost(const Table * table) const
@@ -156,9 +156,9 @@ int EqualExpression::tuple_quantity(const Table* table) const
 {
 	int quantity;
 	if(_left_attribute.first == "") {
-		quantity = table->attribute_cardinality(_right_attribute.second);
+		quantity = ceil(table->attribute_cardinality(_right_attribute.second));
 	} else {
-		quantity = table->attribute_cardinality(_left_attribute.second);
+		quantity = ceil(table->attribute_cardinality(_left_attribute.second));
 	}
 	return quantity;
 }
@@ -228,7 +228,7 @@ int NotEqualExpression::tuple_quantity(const Table* table) const
 	} else {
 		quantity = table->attribute_cardinality(_left_attribute.second);
 	}
-	return table->tuple_quantity() - table->tuple_quantity() / quantity;
+	return table->tuple_quantity() - quantity;
 }
 
 int NotEqualExpression::best_access_cost(const Table * table) const
@@ -501,6 +501,11 @@ int Table::size() const
         res += std::get<1>(i.second);
 	}
 	return res;
+}
+
+int Table::total_table_size() const
+{
+	return size() * tuple_quantity();
 }
 //slide4 - pagina 5
 // primario arvore-B para atributo chave(caso a3 da seleção) = hIs + 1

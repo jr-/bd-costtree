@@ -44,15 +44,16 @@ class Table {
 		string name() const {return _name;};
 
 		virtual int tuple_quantity() const;
-		int block_quantity() const {return ceil((double)_tuple_quantity / (double)block_factor());};
+		int block_quantity() const {return ceil(tuple_quantity() / (double)block_factor());};
 
 		int block_factor() const {return floor(_block_size / size());};
 		int size() const;
+		int total_table_size() const;
 		pair<unsigned int, unsigned int> primary_index(string attribute_name) const;
 		pair<unsigned int, unsigned int> secondary_index(string attribute_name) const;
 		unsigned int primary_index_access_cost(string attribute_name) const;
 		unsigned int secondary_index_access_cost(string attribute_name) const;
-		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/std::get<2>(_attributes.at(attribute_name));};
+		double attribute_cardinality(string attribute_name) const {return _tuple_quantity/(double)std::get<2>(_attributes.at(attribute_name));};
 		deque<string> primary_key() const {return _primary_key;};
         unordered_map<string, std::tuple<type, unsigned int, unsigned int>> get_attributes() const {return _attributes;};
         unordered_map<string, string> get_fks() const {return _foreign_keys;};
